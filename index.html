@@ -51,7 +51,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:var(-
 .filter-bar select:focus,.filter-bar input:focus{border-color:var(--accent);}
 
 /* Stats */
-#overview-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-bottom:20px;}
+#overview-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
 .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);}
 .stat-card .label{font-size:12px;color:var(--text2);margin-bottom:6px;}
 .stat-card .value{font-size:24px;font-weight:700;}
@@ -760,7 +760,7 @@ function renderOverview() {
   document.getElementById('overview-stats').innerHTML = `
     <div class="stat-card"><div class="label">任務總數</div><div class="value">${G.items.length}</div></div>
     <div class="stat-card"><div class="label">成員人數</div><div class="value">${G.members.length}</div></div>
-    <div class="stat-card"><div class="label" style="color:var(--green)">已完成格子</div><div class="value" style="color:var(--green)">${done}</div></div>
+    <div class="stat-card"><div class="label" style="color:var(--green)">已完成</div><div class="value" style="color:var(--green)">${done}</div></div>
     <div class="stat-card"><div class="label" style="color:var(--red)">逾期未完成</div><div class="value" style="color:var(--red)">${overdue}</div></div>
   `;
 
