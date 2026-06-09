@@ -247,14 +247,20 @@ table.delay-table tr:last-child td{border-bottom:none;}
   .notice-board{padding:14px;}
   .notice-item{padding:6px 0;}
 
-  /* Matrix — 橫向捲動，固定任務欄 */
+  #panel-matrix.active{
+    display:flex;
+    flex-direction:column;
+    height:calc(100vh - 104px);
+    overflow:hidden;
+  }
+  #panel-matrix .filter-bar{flex-shrink:0;}
   .matrix-wrap{
-    overflow-x:auto;
-    overflow-y:auto;
-    max-height:calc(100vh - 130px);
+    flex:1;
+    overflow:auto;
     -webkit-overflow-scrolling:touch;
     overscroll-behavior:contain;
     touch-action:pan-x pan-y;
+    max-height:none;
   }
   table.matrix{min-width:600px;}
   table.matrix thead th{padding:6px 8px;font-size:11px;}
