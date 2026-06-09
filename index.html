@@ -85,6 +85,19 @@ table.matrix tbody td.task-info{padding:8px 12px;min-width:220px;max-width:280px
 .tag-minutes{background:#dcfce7;color:#166534;}
 .tag-trial{background:#fce7f3;color:#9d174d;}
 .tag-doc{background:#e0f2fe;color:#0369a1;}
+.tag-meeting{background:#fef9c3;color:#854d0e;}
+
+/* Notice board */
+#overview-top{display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start;margin-bottom:20px;}
+#overview-top-left{}
+.notice-board{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);height:100%;}
+.notice-board h3{font-size:14px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:6px;color:var(--accent);}
+.notice-item{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:1.5;}
+.notice-item:last-child{border-bottom:none;padding-bottom:0;}
+.notice-num{background:var(--accent);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px;}
+.notice-text{flex:1;}
+.notice-days{background:var(--accent-light);color:var(--accent);border-radius:10px;padding:1px 8px;font-size:11px;font-weight:600;margin-left:4px;white-space:nowrap;}
+@media(max-width:900px){#overview-top{grid-template-columns:1fr;}}
 table.matrix tbody tr:hover td{background:#f8faff;}
 table.matrix tbody tr.group-header td{background:var(--surface2);font-weight:700;font-size:12px;color:var(--text2);padding:6px 12px;letter-spacing:.05em;}
 
@@ -218,9 +231,37 @@ table.delay-table tr:last-child td{border-bottom:none;}
       <label>人員篩選：</label>
       <select id="ov-person-filter" onchange="renderOverview()"><option value="">全部成員</option></select>
     </div>
-    <div id="overview-stats"></div>
-    <div class="section-title">成員工作進度 <span class="badge" id="ov-member-count"></span></div>
-    <div id="person-cards"></div>
+    <div id="overview-top">
+      <div id="overview-top-left">
+        <div id="overview-stats"></div>
+        <div class="section-title">成員工作進度 <span class="badge" id="ov-member-count"></span></div>
+        <div id="person-cards"></div>
+      </div>
+      <!-- Notice Board -->
+      <div class="notice-board">
+        <h3>📢 教研部內部會議簡報</h3>
+        <div class="notice-item">
+          <div class="notice-num">一</div>
+          <div class="notice-text">公文<span class="notice-days">3 個工作天</span>完成</div>
+        </div>
+        <div class="notice-item">
+          <div class="notice-num">二</div>
+          <div class="notice-text">會議記錄<span class="notice-days">5 個工作天</span>完成</div>
+        </div>
+        <div class="notice-item">
+          <div class="notice-num">三</div>
+          <div class="notice-text">臨床試驗合約<span class="notice-days">5 個工作天</span>完成</div>
+        </div>
+        <div class="notice-item">
+          <div class="notice-num">四</div>
+          <div class="notice-text">教研部內部會議簡報<span class="notice-days">5 個工作天</span>完成</div>
+        </div>
+        <div style="margin-top:12px;font-size:11px;color:var(--text2);line-height:1.6;">
+          ※ 工作天從建立日隔天起算，排除週六日及國定假日<br>
+          ※ 截止時間均為當日 17:00
+        </div>
+      </div>
+    </div>
     <div id="delay-section" style="display:none;margin-top:24px;">
       <div class="section-title" style="color:var(--red)">⚠️ 延遲率統計（管理員限定）</div>
       <div class="delay-table-wrap"><table class="delay-table" id="delay-table"></table></div>
@@ -241,6 +282,7 @@ table.delay-table tr:last-child td{border-bottom:none;}
         <option value="minutes">會議記錄</option>
         <option value="trial">臨床試驗合約</option>
         <option value="doc">公文</option>
+        <option value="meeting">教研部內部會議簡報</option>
       </select>
     </div>
     <div class="matrix-wrap" id="matrix-container"></div>
@@ -262,6 +304,7 @@ table.delay-table tr:last-child td{border-bottom:none;}
           <option value="minutes">會議記錄</option>
           <option value="trial">臨床試驗合約</option>
           <option value="doc">公文</option>
+          <option value="meeting">教研部內部會議簡報</option>
         </select>
       </div>
     </div>
@@ -352,6 +395,7 @@ table.delay-table tr:last-child td{border-bottom:none;}
         <option value="minutes">📝 會議記錄（5工作天）</option>
         <option value="trial">🧪 臨床試驗合約（5工作天）</option>
         <option value="doc">📄 公文（3工作天）</option>
+        <option value="meeting">🗣 教研部內部會議簡報（5工作天）</option>
       </select>
     </div>
     <div class="modal-form-2col">
@@ -386,7 +430,7 @@ table.delay-table tr:last-child td{border-bottom:none;}
 // ══════════════════════════════════════════════
 //  CONFIG
 // ══════════════════════════════════════════════
-const API_URL = 'https://script.google.com/macros/s/AKfycby0a49UxpOi0O9Mf9yA_ILtikpN2m5Y6EaLqxCREKmQ4Q8MLWDiock_v5mUmLqZfx8z2g/exec';
+const API_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
 
 // ══════════════════════════════════════════════
 //  GLOBAL STATE
@@ -435,12 +479,13 @@ function nowStr() {
 //  TYPE CONFIG
 // ══════════════════════════════════════════════
 const TYPE_META = {
-  routine:  { label:'📅 年度例行',    tag:'tag-routine', workdays: null },
-  temp:     { label:'⚡ 臨時交辦',    tag:'tag-temp',    workdays: null },
-  collab:   { label:'🤝 跨人員協作',  tag:'tag-collab',  workdays: null },
-  minutes:  { label:'📝 會議記錄',    tag:'tag-minutes', workdays: 5 },
-  trial:    { label:'🧪 臨床試驗合約',tag:'tag-trial',   workdays: 5 },
-  doc:      { label:'📄 公文',        tag:'tag-doc',     workdays: 3 },
+  routine:  { label:'📅 年度例行',        tag:'tag-routine', workdays: null },
+  temp:     { label:'⚡ 臨時交辦',        tag:'tag-temp',    workdays: null },
+  collab:   { label:'🤝 跨人員協作',      tag:'tag-collab',  workdays: null },
+  minutes:  { label:'📝 會議記錄',        tag:'tag-minutes', workdays: 5 },
+  trial:    { label:'🧪 臨床試驗合約',    tag:'tag-trial',   workdays: 5 },
+  doc:      { label:'📄 公文',            tag:'tag-doc',     workdays: 3 },
+  meeting:  { label:'🗣 教研部內部會議簡報',tag:'tag-meeting', workdays: 5 },
 };
 
 // ══════════════════════════════════════════════
@@ -694,10 +739,11 @@ function renderMatrix() {
       '<div style="padding:40px;text-align:center;color:var(--text2)">無資料</div>'; return;
   }
 
-  const typeOrder = ['routine','temp','collab','minutes','trial','doc'];
+  const typeOrder = ['routine','temp','collab','minutes','trial','doc','meeting'];
   const typeLabel = {
     routine:'📅 年度例行業務', temp:'⚡ 臨時交辦任務', collab:'🤝 跨人員協作項目',
-    minutes:'📝 會議記錄', trial:'🧪 臨床試驗合約', doc:'📄 公文'
+    minutes:'📝 會議記錄', trial:'🧪 臨床試驗合約', doc:'📄 公文',
+    meeting:'🗣 教研部內部會議簡報'
   };
 
   let html = `<table class="matrix"><thead><tr>
