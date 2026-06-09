@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>教學研究部工作進度追蹤系統</title>
+<style>
+:root {
+  --bg:#f0f2f5; --surface:#fff; --surface2:#f8f9fb; --border:#e2e6ea;
+  --text:#1a2332; --text2:#5a6476;
+  --accent:#2563eb; --accent-light:#eff4ff;
+  --green:#16a34a; --green-light:#f0fdf4;
+  --red:#dc2626; --red-light:#fef2f2;
+  --yellow:#d97706; --yellow-light:#fffbeb;
+  --orange:#c2410c; --orange-light:#fff7ed;
+  --gray:#6b7280; --gray-light:#f3f4f6;
+  --radius:10px; --shadow:0 1px 4px rgba(0,0,0,.08); --shadow-md:0 4px 16px rgba(0,0,0,.1);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;}
+
+/* Header */
+#header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;gap:16px;height:56px;position:sticky;top:0;z-index:100;box-shadow:var(--shadow);}
+#header h1{font-size:16px;font-weight:700;flex:1;}
+.year-badge{background:var(--accent-light);color:var(--accent);border-radius:20px;padding:3px 12px;font-size:13px;font-weight:600;}
+#login-area{display:flex;align-items:center;gap:8px;}
+#login-btn,#logout-btn{padding:5px 14px;border-radius:6px;border:1px solid var(--border);cursor:pointer;font-size:13px;font-family:inherit;}
+#login-btn{background:var(--accent);color:#fff;border-color:var(--accent);}
+#logout-btn{background:var(--surface);color:var(--text2);}
+#user-label{font-size:13px;color:var(--text2);}
+
+/* Tabs */
+#tabs{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 24px;gap:4px;}
+.tab-btn{padding:12px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-family:inherit;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;white-space:nowrap;}
+.tab-btn:hover{color:var(--accent);}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600;}
+.tab-btn.hidden{display:none;}
+
+/* Main */
+#main{padding:20px 24px;max-width:1400px;margin:0 auto;}
+.panel{display:none;} .panel.active{display:block;}
+
+/* Section title */
+.section-title{font-size:15px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.section-title .badge{background:var(--accent-light);color:var(--accent);border-radius:20px;padding:2px 10px;font-size:12px;font-weight:500;}
+
+/* Filter bar */
+.filter-bar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.filter-bar label{font-size:13px;color:var(--text2);}
+.filter-bar select,.filter-bar input{padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);outline:none;}
+.filter-bar select:focus,.filter-bar input:focus{border-color:var(--accent);}
+
+/* Stats */
+#overview-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-bottom:20px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);}
+.stat-card .label{font-size:12px;color:var(--text2);margin-bottom:6px;}
+.stat-card .value{font-size:24px;font-weight:700;}
+
+/* Person cards */
+#person-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
+.person-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);cursor:pointer;transition:box-shadow .15s,border-color .15s;}
+.person-card:hover{box-shadow:var(--shadow-md);border-color:var(--accent);}
+.person-card .name{font-size:15px;font-weight:700;margin-bottom:10px;}
+.progress-bar-wrap{background:var(--border);border-radius:4px;height:6px;margin-bottom:6px;}
+.progress-bar-fill{height:6px;border-radius:4px;background:var(--accent);transition:width .3s;}
+.person-card .pct{font-size:12px;color:var(--text2);}
+.delay-badge{display:inline-block;margin-top:8px;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;}
+.delay-badge.low{background:var(--green-light);color:var(--green);}
+.delay-badge.mid{background:var(--yellow-light);color:var(--yellow);}
+.delay-badge.high{background:var(--red-light);color:var(--red);}
+
+/* Matrix */
+.matrix-wrap{overflow-x:auto;}
+table.matrix{border-collapse:collapse;min-width:100%;background:var(--surface);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);}
+table.matrix th,table.matrix td{border:1px solid var(--border);padding:0;white-space:nowrap;}
+table.matrix thead th{background:var(--surface2);font-size:12px;font-weight:600;color:var(--text2);padding:8px 12px;text-align:center;}
+table.matrix thead th.task-col{text-align:left;min-width:220px;max-width:280px;}
+table.matrix tbody td.task-info{padding:8px 12px;min-width:220px;max-width:280px;}
+.task-name{font-size:13px;font-weight:600;white-space:normal;line-height:1.4;}
+.task-meta{font-size:11px;color:var(--text2);margin-top:2px;}
+.task-type-tag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:4px;margin-right:4px;font-weight:500;}
+.tag-routine{background:#dbeafe;color:#1d4ed8;}
+.tag-temp{background:#fef3c7;color:#92400e;}
+.tag-collab{background:#f3e8ff;color:#6d28d9;}
+.tag-minutes{background:#dcfce7;color:#166534;}
+.tag-trial{background:#fce7f3;color:#9d174d;}
+.tag-doc{background:#e0f2fe;color:#0369a1;}
+table.matrix tbody tr:hover td{background:#f8faff;}
+table.matrix tbody tr.group-header td{background:var(--surface2);font-weight:700;font-size:12px;color:var(--text2);padding:6px 12px;letter-spacing:.05em;}
+
+/* Status cells */
+.status-cell{width:76px;min-width:76px;text-align:center;vertical-align:middle;padding:4px!important;}
+.status-btn{display:inline-flex;align-items:center;justify-content:center;width:64px;height:30px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s;}
+.status-btn:hover{opacity:.8;}
+.status-btn.not-assigned{background:transparent;cursor:default;color:var(--border);font-size:16px;}
+.s0{background:var(--gray-light);color:var(--gray);}
+.sdone{background:var(--green-light);color:var(--green);}
+.soverdue{background:var(--red-light);color:var(--red);}
+.slate{background:var(--orange-light);color:var(--orange);}
+.s3{background:var(--yellow-light);color:var(--yellow);}
+
+/* Status picker */
+#status-picker{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px;box-shadow:var(--shadow-md);z-index:200;display:none;min-width:160px;}
+#status-picker .picker-title{font-size:11px;color:var(--text2);padding:4px 8px 8px;border-bottom:1px solid var(--border);margin-bottom:6px;}
+.picker-opt{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:13px;transition:background .1s;}
+.picker-opt:hover{background:var(--surface2);}
+.picker-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+
+/* Buttons */
+.btn{padding:7px 16px;border-radius:6px;border:1px solid var(--border);cursor:pointer;font-size:13px;font-family:inherit;font-weight:500;transition:all .15s;}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn-primary:hover{background:#1d4ed8;}
+.btn-default{background:var(--surface);color:var(--text);}
+.btn-default:hover{background:var(--surface2);}
+.btn-danger{background:var(--red-light);color:var(--red);border-color:#fca5a5;}
+.btn-danger:hover{background:#fee2e2;}
+.btn-sm{padding:4px 10px;font-size:12px;}
+
+/* Items table */
+.items-toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+.items-table-wrap{overflow-x:auto;}
+table.items-table{border-collapse:collapse;width:100%;background:var(--surface);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);}
+table.items-table th{background:var(--surface2);padding:10px 12px;font-size:12px;font-weight:600;color:var(--text2);text-align:left;border-bottom:1px solid var(--border);}
+table.items-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle;}
+table.items-table tr:last-child td{border-bottom:none;}
+table.items-table tr:hover td{background:var(--surface2);}
+
+/* Settings */
+.settings-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;box-shadow:var(--shadow);}
+.settings-section h3{font-size:14px;font-weight:700;margin-bottom:14px;}
+.form-row{display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
+.form-row label{font-size:13px;color:var(--text2);min-width:80px;}
+.form-row input,.form-row select{padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;outline:none;flex:1;min-width:120px;max-width:300px;}
+.form-row input:focus{border-color:var(--accent);}
+.member-list{display:flex;flex-direction:column;gap:6px;}
+.member-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface2);border-radius:6px;border:1px solid var(--border);flex-wrap:wrap;}
+.member-row .member-name{min-width:80px;font-size:13px;font-weight:600;}
+.member-row .member-empid{font-size:12px;color:var(--accent);min-width:80px;}
+.member-row .member-pwd{font-size:12px;color:var(--text2);}
+/* Holiday list */
+.holiday-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.holiday-tag{background:var(--red-light);color:var(--red);border-radius:6px;padding:3px 10px;font-size:12px;display:flex;align-items:center;gap:6px;}
+.holiday-tag button{background:none;border:none;cursor:pointer;color:var(--red);font-size:14px;line-height:1;padding:0;}
+
+/* Modal */
+#modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;display:none;align-items:center;justify-content:center;}
+#modal-overlay.active{display:flex;}
+#modal-box{background:var(--surface);border-radius:var(--radius);padding:24px;min-width:400px;max-width:600px;width:90vw;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-md);}
+#modal-box h2{font-size:16px;font-weight:700;margin-bottom:16px;}
+.modal-form-row{margin-bottom:12px;}
+.modal-form-row label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px;font-weight:500;}
+.modal-form-row input,.modal-form-row select,.modal-form-row textarea{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;outline:none;}
+.modal-form-row input:focus,.modal-form-row select:focus,.modal-form-row textarea:focus{border-color:var(--accent);}
+.modal-form-row textarea{min-height:60px;resize:vertical;}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+.member-checkbox-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px;}
+.member-checkbox-grid label{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:4px 6px;border-radius:4px;border:1px solid var(--border);transition:background .1s;}
+.member-checkbox-grid label:hover{background:var(--accent-light);}
+.member-checkbox-grid input[type=checkbox]{accent-color:var(--accent);}
+/* auto-deadline hint */
+.deadline-hint{font-size:11px;color:var(--accent);margin-top:4px;min-height:16px;}
+/* row with two fields */
+.modal-form-2col{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+/* Login modal */
+#login-modal{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:400;display:none;align-items:center;justify-content:center;}
+#login-modal.active{display:flex;}
+#login-box{background:var(--surface);border-radius:var(--radius);padding:28px;min-width:320px;box-shadow:var(--shadow-md);}
+#login-box h2{font-size:16px;font-weight:700;margin-bottom:20px;}
+#login-box .form-field{margin-bottom:12px;}
+#login-box .form-field label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px;}
+#login-box .form-field input{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;outline:none;}
+#login-box .form-field input:focus{border-color:var(--accent);}
+#login-error{color:var(--red);font-size:12px;margin-top:6px;min-height:16px;}
+#login-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+
+/* Delay table */
+.delay-table-wrap{overflow-x:auto;margin-top:16px;}
+table.delay-table{border-collapse:collapse;background:var(--surface);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);width:100%;}
+table.delay-table th{background:#fef2f2;padding:8px 14px;font-size:12px;color:var(--red);font-weight:600;text-align:left;border-bottom:1px solid #fecaca;}
+table.delay-table td{padding:8px 14px;border-bottom:1px solid var(--border);font-size:13px;}
+table.delay-table tr:last-child td{border-bottom:none;}
+
+/* Toast / Loading */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--text);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;opacity:0;transition:all .3s;z-index:500;pointer-events:none;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.85);z-index:600;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-size:14px;color:var(--text2);}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<div id="loading-overlay"><div class="spinner"></div><span>載入中...</span></div>
+
+<div id="header">
+  <h1>📋 教學研究部工作進度追蹤</h1>
+  <span class="year-badge" id="year-badge">2026</span>
+  <div id="login-area">
+    <span id="user-label"></span>
+    <button id="login-btn" onclick="showLoginModal()">登入</button>
+    <button id="logout-btn" style="display:none" onclick="doLogout()">登出</button>
+  </div>
+</div>
+
+<div id="tabs">
+  <button class="tab-btn active" data-panel="panel-overview" onclick="switchTab(this)">📊 總覽</button>
+  <button class="tab-btn" data-panel="panel-matrix" onclick="switchTab(this)">🗂 追蹤矩陣</button>
+  <button class="tab-btn hidden" id="tab-items" data-panel="panel-items" onclick="switchTab(this)">📝 任務管理</button>
+  <button class="tab-btn hidden" id="tab-settings" data-panel="panel-settings" onclick="switchTab(this)">⚙️ 設定</button>
+</div>
+
+<div id="main">
+
+  <!-- Overview -->
+  <div class="panel active" id="panel-overview">
+    <div class="filter-bar">
+      <label>人員篩選：</label>
+      <select id="ov-person-filter" onchange="renderOverview()"><option value="">全部成員</option></select>
+    </div>
+    <div id="overview-stats"></div>
+    <div class="section-title">成員工作進度 <span class="badge" id="ov-member-count"></span></div>
+    <div id="person-cards"></div>
+    <div id="delay-section" style="display:none;margin-top:24px;">
+      <div class="section-title" style="color:var(--red)">⚠️ 延遲率統計（管理員限定）</div>
+      <div class="delay-table-wrap"><table class="delay-table" id="delay-table"></table></div>
+    </div>
+  </div>
+
+  <!-- Matrix -->
+  <div class="panel" id="panel-matrix">
+    <div class="filter-bar">
+      <label>人員篩選：</label>
+      <select id="mx-person-filter" onchange="renderMatrix()"><option value="">全部成員</option></select>
+      <label>任務類型：</label>
+      <select id="mx-type-filter" onchange="renderMatrix()">
+        <option value="">全部</option>
+        <option value="routine">年度例行</option>
+        <option value="temp">臨時交辦</option>
+        <option value="collab">跨人員協作</option>
+        <option value="minutes">會議記錄</option>
+        <option value="trial">臨床試驗合約</option>
+        <option value="doc">公文</option>
+      </select>
+    </div>
+    <div class="matrix-wrap" id="matrix-container"></div>
+  </div>
+
+  <!-- Items -->
+  <div class="panel" id="panel-items">
+    <div class="items-toolbar">
+      <button class="btn btn-primary" onclick="openItemModal()">＋ 新增任務</button>
+      <div class="filter-bar" style="margin:0">
+        <label>人員：</label>
+        <select id="it-person-filter" onchange="renderItems()"><option value="">全部</option></select>
+        <label>類型：</label>
+        <select id="it-type-filter" onchange="renderItems()">
+          <option value="">全部</option>
+          <option value="routine">年度例行</option>
+          <option value="temp">臨時交辦</option>
+          <option value="collab">跨人員協作</option>
+          <option value="minutes">會議記錄</option>
+          <option value="trial">臨床試驗合約</option>
+          <option value="doc">公文</option>
+        </select>
+      </div>
+    </div>
+    <div class="items-table-wrap">
+      <table class="items-table">
+        <thead><tr>
+          <th>任務名稱</th><th>類型</th><th>負責人</th>
+          <th>截止日期</th><th>截止時間</th><th>備註</th><th>操作</th>
+        </tr></thead>
+        <tbody id="items-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="panel" id="panel-settings">
+    <div class="settings-section">
+      <h3>👥 人員管理</h3>
+      <div id="member-list-wrap"></div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center;">
+        <input id="new-member-name" placeholder="姓名" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100px;outline:none;">
+        <input id="new-member-empid" placeholder="人事號（帳號）" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:130px;outline:none;">
+        <input id="new-member-pwd" placeholder="密碼" type="password" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:120px;outline:none;">
+        <button class="btn btn-primary" onclick="addMember()">新增成員</button>
+      </div>
+    </div>
+    <div class="settings-section">
+      <h3>📅 國定假日管理</h3>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:10px;">計算截止日時會自動排除週六日與以下假日</p>
+      <div class="holiday-list" id="holiday-list"></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input id="new-holiday" type="date" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none;">
+        <input id="new-holiday-note" placeholder="假日名稱（選填）" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:160px;outline:none;">
+        <button class="btn btn-primary btn-sm" onclick="addHoliday()">新增假日</button>
+      </div>
+    </div>
+    <div class="settings-section">
+      <h3>🔐 管理員帳號</h3>
+      <div class="form-row"><label>帳號</label><input id="admin-user" placeholder="admin"></div>
+      <div class="form-row"><label>密碼</label><input id="admin-pass" type="password" placeholder="••••••"></div>
+      <button class="btn btn-primary btn-sm" onclick="saveSettings()">儲存設定</button>
+    </div>
+    <div class="settings-section">
+      <h3>📅 年度設定</h3>
+      <div class="form-row"><label>追蹤年度</label><input id="cfg-year" type="number" placeholder="2026" style="max-width:100px;"></div>
+      <button class="btn btn-primary btn-sm" onclick="saveSettings()">儲存</button>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- Status Picker -->
+<div id="status-picker">
+  <div class="picker-title" id="picker-title"></div>
+  <div id="picker-opts"></div>
+</div>
+
+<!-- Login Modal -->
+<div id="login-modal">
+  <div id="login-box">
+    <h2>🔐 登入系統</h2>
+    <div class="form-field"><label>人事號（或管理員帳號）</label>
+      <input id="login-user" type="text" autocomplete="username"></div>
+    <div class="form-field"><label>密碼</label>
+      <input id="login-pass" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div id="login-error"></div>
+    <div id="login-actions">
+      <button class="btn btn-default" onclick="closeLoginModal()">取消</button>
+      <button class="btn btn-primary" onclick="doLogin()">登入</button>
+    </div>
+  </div>
+</div>
+
+<!-- Item Modal -->
+<div id="modal-overlay">
+  <div id="modal-box">
+    <h2 id="modal-title">新增任務</h2>
+    <div class="modal-form-row">
+      <label>任務名稱 *</label>
+      <input id="f-name" placeholder="請輸入任務名稱">
+    </div>
+    <div class="modal-form-row">
+      <label>任務類型 *</label>
+      <select id="f-type" onchange="onTypeChange()">
+        <option value="routine">📅 年度例行業務</option>
+        <option value="temp">⚡ 臨時交辦任務</option>
+        <option value="collab">🤝 跨人員協作項目</option>
+        <option value="minutes">📝 會議記錄（5工作天）</option>
+        <option value="trial">🧪 臨床試驗合約（5工作天）</option>
+        <option value="doc">📄 公文（3工作天）</option>
+      </select>
+    </div>
+    <div class="modal-form-2col">
+      <div class="modal-form-row">
+        <label>截止日期</label>
+        <input id="f-deadline" type="date">
+        <div class="deadline-hint" id="deadline-hint"></div>
+      </div>
+      <div class="modal-form-row">
+        <label>截止時間（預設17:00）</label>
+        <input id="f-deadtime" type="time" value="17:00">
+      </div>
+    </div>
+    <div class="modal-form-row">
+      <label>負責人 *（可多選）</label>
+      <div class="member-checkbox-grid" id="f-members"></div>
+    </div>
+    <div class="modal-form-row">
+      <label>備註</label>
+      <textarea id="f-note" placeholder="選填"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-default" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveItem()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+//  CONFIG
+// ══════════════════════════════════════════════
+const API_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
+
+// ══════════════════════════════════════════════
+//  GLOBAL STATE
+// ══════════════════════════════════════════════
+const G = {
+  year: 2026,
+  members:   [],  // {name, empId, pwd}
+  items:     [],  // {id, name, type, deadline, deadtime, members[], note}
+  statusMap: {},  // key → {status, completedAt}
+  holidays:  [],  // ['2026-01-01', ...]
+  cfg: { adminUser:'admin', adminPass:'admin' }
+};
+
+// ══════════════════════════════════════════════
+//  WORKING-DAY CALCULATOR
+// ══════════════════════════════════════════════
+function addWorkdays(fromDate, days) {
+  // fromDate: Date object (建立日)
+  // 從隔天起算，數 days 個工作天
+  let d = new Date(fromDate);
+  d.setDate(d.getDate() + 1); // 隔天起算
+  let counted = 0;
+  while (counted < days) {
+    const dow = d.getDay();
+    const ds  = dateStr(d);
+    if (dow !== 0 && dow !== 6 && !G.holidays.includes(ds)) {
+      counted++;
+    }
+    if (counted < days) d.setDate(d.getDate() + 1);
+  }
+  return dateStr(d);
+}
+
+function dateStr(d) {
+  return d.toISOString().slice(0,10);
+}
+
+function todayStr() { return dateStr(new Date()); }
+
+function nowStr() {
+  const n = new Date();
+  return n.toISOString().slice(0,16); // yyyy-MM-ddTHH:mm
+}
+
+// ══════════════════════════════════════════════
+//  TYPE CONFIG
+// ══════════════════════════════════════════════
+const TYPE_META = {
+  routine:  { label:'📅 年度例行',    tag:'tag-routine', workdays: null },
+  temp:     { label:'⚡ 臨時交辦',    tag:'tag-temp',    workdays: null },
+  collab:   { label:'🤝 跨人員協作',  tag:'tag-collab',  workdays: null },
+  minutes:  { label:'📝 會議記錄',    tag:'tag-minutes', workdays: 5 },
+  trial:    { label:'🧪 臨床試驗合約',tag:'tag-trial',   workdays: 5 },
+  doc:      { label:'📄 公文',        tag:'tag-doc',     workdays: 3 },
+};
+
+// ══════════════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════════════
+function session(k, v) {
+  if (v === undefined) return sessionStorage.getItem(k);
+  if (v === null) sessionStorage.removeItem(k);
+  else sessionStorage.setItem(k, v);
+}
+function isAdmin()    { return !!session('wt_admin'); }
+function currentUser(){ return session('wt_user') || null; }
+
+function doLogin() {
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value;
+  const err = document.getElementById('login-error');
+  err.textContent = '';
+  if (u === G.cfg.adminUser && p === G.cfg.adminPass) {
+    session('wt_admin','1'); session('wt_user','管理員');
+    closeLoginModal(); applyAuth(); toast('已以管理員身分登入'); refreshAll();
+    return;
+  }
+  const m = G.members.find(x => x.empId === u && x.pwd === p);
+  if (m) {
+    session('wt_user', m.name);
+    closeLoginModal(); applyAuth(); toast(`已登入：${m.name}`); refreshAll();
+    return;
+  }
+  err.textContent = '人事號或密碼錯誤';
+}
+
+function doLogout() {
+  ['wt_admin','wt_user'].forEach(k => session(k, null));
+  applyAuth(); toast('已登出'); refreshAll();
+}
+
+function applyAuth() {
+  const user = currentUser();
+  document.getElementById('user-label').textContent = user ? `👤 ${user}` : '';
+  document.getElementById('login-btn').style.display  = user ? 'none' : '';
+  document.getElementById('logout-btn').style.display = user ? '' : 'none';
+  document.getElementById('tab-items').classList.toggle('hidden', !isAdmin());
+  document.getElementById('tab-settings').classList.toggle('hidden', !isAdmin());
+  document.getElementById('delay-section').style.display = isAdmin() ? '' : 'none';
+}
+
+// ══════════════════════════════════════════════
+//  API
+// ══════════════════════════════════════════════
+async function apiGet(params) {
+  const qs = Object.entries(params)
+    .map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(typeof v==='object'?JSON.stringify(v):v)}`)
+    .join('&');
+  const res = await fetch(`${API_URL}?${qs}`);
+  return res.json();
+}
+
+// ══════════════════════════════════════════════
+//  LOAD & SAVE
+// ══════════════════════════════════════════════
+async function loadAll() {
+  showLoading(true);
+  try {
+    const d = await apiGet({ action:'read', year: G.year });
+    G.members   = d.members   || [];
+    G.items     = d.items     || [];
+    G.holidays  = d.holidays  || [];
+    G.cfg       = Object.assign(G.cfg, d.cfg || {});
+    G.year      = d.year || G.year;
+    G.statusMap = {};
+    (d.statuses||[]).forEach(r => { G.statusMap[r.key] = safeParseEntry(r.value); });
+    document.getElementById('year-badge').textContent = G.year;
+    document.getElementById('cfg-year').value = G.year;
+    document.getElementById('admin-user').value = G.cfg.adminUser || '';
+  } catch(e) {
+    loadLocal();
+  }
+  showLoading(false);
+  applyAuth(); populateFilters(); refreshAll();
+}
+
+function safeParseEntry(raw) {
+  if (!raw) return { status:'0', completedAt: null };
+  if (typeof raw === 'object') return raw;
+  try { return JSON.parse(raw); } catch(e) { return { status: String(raw), completedAt: null }; }
+}
+
+function loadLocal() {
+  try {
+    const d = JSON.parse(localStorage.getItem('wt_local')||'{}');
+    G.members   = d.members   || [];
+    G.items     = d.items     || [];
+    G.holidays  = d.holidays  || [];
+    G.statusMap = {};
+    Object.entries(d.statusMap||{}).forEach(([k,v]) => { G.statusMap[k] = safeParseEntry(v); });
+    G.cfg = Object.assign(G.cfg, d.cfg||{});
+  } catch(e) {}
+}
+
+function saveLocal() {
+  localStorage.setItem('wt_local', JSON.stringify({
+    members: G.members, items: G.items, holidays: G.holidays,
+    statusMap: G.statusMap, cfg: G.cfg
+  }));
+}
+
+async function pushStatus(itemId, memberName, val) {
+  const key = sk(itemId, memberName);
+  const old = G.statusMap[key] || { status:'0', completedAt: null };
+  const now = nowStr();
+  if (val === 'done') {
+    old.completedAt = old.completedAt || now;
+  } else {
+    old.completedAt = null;
+  }
+  old.status = val;
+  G.statusMap[key] = old;
+  saveLocal();
+  try { await apiGet({ action:'updateStatus', key, value: JSON.stringify(old) }); }
+  catch(e) { toast('狀態已暫存（離線）'); }
+}
+
+// ══════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════
+function sk(itemId, memberName) { return `${itemId}__${memberName}`; }
+
+function getEntry(itemId, memberName) {
+  return G.statusMap[sk(itemId, memberName)] || { status:'0', completedAt: null };
+}
+
+// deadline format: 'yyyy-MM-dd' or 'yyyy-MM-ddTHH:mm'
+function getEffStatus(itemId, memberName, deadline, deadtime) {
+  const e   = getEntry(itemId, memberName);
+  const s   = e.status;
+  if (!deadline) return s;
+
+  // Build deadline datetime string for comparison
+  const deadDT = deadtime ? `${deadline}T${deadtime}` : `${deadline}T23:59`;
+  const nowDT  = new Date().toISOString().slice(0,16);
+
+  if (s === '0' && nowDT > deadDT) return 'overdue';
+  if (s === 'done' && e.completedAt && e.completedAt > deadDT) return 'late';
+  return s;
+}
+
+// ══════════════════════════════════════════════
+//  DELAY CALC
+// ══════════════════════════════════════════════
+function calcDelay(memberName) {
+  const with_dl = G.items.filter(it => it.deadline && it.members.includes(memberName));
+  if (!with_dl.length) return null;
+  let delayed = 0;
+  with_dl.forEach(it => {
+    const eff = getEffStatus(it.id, memberName, it.deadline, it.deadtime);
+    if (eff === 'overdue' || eff === 'late') delayed++;
+  });
+  return { delayed, total: with_dl.length, rate: (delayed/with_dl.length*100).toFixed(1) };
+}
+
+// ══════════════════════════════════════════════
+//  FILTERS
+// ══════════════════════════════════════════════
+function populateFilters() {
+  ['ov-person-filter','mx-person-filter','it-person-filter'].forEach(id => {
+    const sel = document.getElementById(id);
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">全部成員</option>';
+    G.members.forEach(m => {
+      const o = document.createElement('option');
+      o.value = m.name; o.textContent = m.name;
+      sel.appendChild(o);
+    });
+    sel.value = cur;
+  });
+}
+
+// ══════════════════════════════════════════════
+//  OVERVIEW
+// ══════════════════════════════════════════════
+function renderOverview() {
+  const fp = document.getElementById('ov-person-filter').value;
+  const members = fp ? G.members.filter(m => m.name === fp) : G.members;
+
+  let done=0, overdue=0;
+  G.members.forEach(m => G.items.forEach(it => {
+    if (!it.members.includes(m.name)) return;
+    const e = getEffStatus(it.id, m.name, it.deadline, it.deadtime);
+    if (e==='done'||e==='late') done++;
+    if (e==='overdue') overdue++;
+  }));
+
+  document.getElementById('overview-stats').innerHTML = `
+    <div class="stat-card"><div class="label">任務總數</div><div class="value">${G.items.length}</div></div>
+    <div class="stat-card"><div class="label">成員人數</div><div class="value">${G.members.length}</div></div>
+    <div class="stat-card"><div class="label" style="color:var(--green)">已完成格子</div><div class="value" style="color:var(--green)">${done}</div></div>
+    <div class="stat-card"><div class="label" style="color:var(--red)">逾期未完成</div><div class="value" style="color:var(--red)">${overdue}</div></div>
+  `;
+
+  document.getElementById('ov-member-count').textContent = `${members.length} 人`;
+  document.getElementById('person-cards').innerHTML = members.map(m => {
+    const assigned = G.items.filter(it => it.members.includes(m.name));
+    const d = assigned.filter(it => { const e=getEffStatus(it.id,m.name,it.deadline,it.deadtime); return e==='done'||e==='late'; }).length;
+    const pct = assigned.length ? Math.round(d/assigned.length*100) : 0;
+    let dlHtml = '';
+    if (isAdmin()) {
+      const dl = calcDelay(m.name);
+      if (dl) {
+        const cls = dl.rate>30?'high':dl.rate>10?'mid':'low';
+        dlHtml = `<div class="delay-badge ${cls}">延遲率 ${dl.rate}%</div>`;
+      }
+    }
+    return `<div class="person-card" onclick="filterByPerson('${m.name}')">
+      <div class="name">👤 ${m.name}</div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+      <div class="pct">${d} / ${assigned.length} 完成（${pct}%）</div>
+      ${dlHtml}
+    </div>`;
+  }).join('') || '<div style="padding:30px;color:var(--text2)">尚無成員資料</div>';
+
+  if (isAdmin()) {
+    const rows = G.members.map(m => {
+      const dl = calcDelay(m.name);
+      if (!dl) return `<tr><td>${m.name}</td><td>—</td><td>—</td><td>—</td></tr>`;
+      const s = dl.rate>30?'color:var(--red)':dl.rate>10?'color:var(--yellow)':'color:var(--green)';
+      return `<tr><td>${m.name}</td><td>${dl.delayed}</td><td>${dl.total}</td><td style="${s};font-weight:600">${dl.rate}%</td></tr>`;
+    }).join('');
+    document.getElementById('delay-table').innerHTML =
+      `<thead><tr><th>姓名</th><th>延遲筆數</th><th>有截止日任務</th><th>延遲率</th></tr></thead><tbody>${rows}</tbody>`;
+  }
+}
+
+function filterByPerson(name) {
+  document.getElementById('ov-person-filter').value = name;
+  renderOverview();
+}
+
+// ══════════════════════════════════════════════
+//  MATRIX
+// ══════════════════════════════════════════════
+function renderMatrix() {
+  const fp = document.getElementById('mx-person-filter').value;
+  const ft = document.getElementById('mx-type-filter').value;
+  let members = fp ? G.members.filter(m=>m.name===fp) : G.members;
+  let items   = ft ? G.items.filter(it=>it.type===ft)  : G.items;
+  if (fp) items = items.filter(it=>it.members.includes(fp));
+
+  if (!items.length || !members.length) {
+    document.getElementById('matrix-container').innerHTML =
+      '<div style="padding:40px;text-align:center;color:var(--text2)">無資料</div>'; return;
+  }
+
+  const typeOrder = ['routine','temp','collab','minutes','trial','doc'];
+  const typeLabel = {
+    routine:'📅 年度例行業務', temp:'⚡ 臨時交辦任務', collab:'🤝 跨人員協作項目',
+    minutes:'📝 會議記錄', trial:'🧪 臨床試驗合約', doc:'📄 公文'
+  };
+
+  let html = `<table class="matrix"><thead><tr>
+    <th class="task-col">任務</th>
+    ${members.map(m=>`<th>${m.name}</th>`).join('')}
+  </tr></thead><tbody>`;
+
+  typeOrder.forEach(type => {
+    const group = items.filter(it=>it.type===type);
+    if (!group.length) return;
+    html += `<tr class="group-header"><td colspan="${members.length+1}">${typeLabel[type]}</td></tr>`;
+    group.forEach(it => {
+      const deadlineDisplay = it.deadline
+        ? (it.deadtime ? `${it.deadline} ${it.deadtime}` : it.deadline)
+        : '無截止日';
+      html += `<tr><td class="task-info">
+        <div class="task-name">${it.name}</div>
+        <div class="task-meta">📅 ${deadlineDisplay}${it.note?` ｜ ${it.note}`:''}</div>
+      </td>`;
+      members.forEach(m => {
+        if (!it.members.includes(m.name)) {
+          html += `<td class="status-cell"><button class="status-btn not-assigned">—</button></td>`; return;
+        }
+        const eff = getEffStatus(it.id, m.name, it.deadline, it.deadtime);
+        const {label, cls} = statusDisplay(eff);
+        const canEdit = isAdmin() || currentUser()===m.name;
+        const click = canEdit
+          ? `onclick="openPicker(event,'${it.id}','${m.name}','${it.deadline||''}','${it.deadtime||''}')"` : '';
+        html += `<td class="status-cell"><button class="status-btn ${cls}" ${click}>${label}</button></td>`;
+      });
+      html += '</tr>';
+    });
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('matrix-container').innerHTML = html;
+}
+
+function statusDisplay(eff) {
+  return ({
+    '0':      {label:'待辦',   cls:'s0'},
+    'done':   {label:'完成',   cls:'sdone'},
+    'late':   {label:'晚交',   cls:'slate'},
+    'overdue':{label:'逾期',   cls:'soverdue'},
+    '3':      {label:'確認中', cls:'s3'},
+    'na':     {label:'N/A',   cls:'s0'},
+  })[eff] || {label:eff, cls:'s0'};
+}
+
+// ══════════════════════════════════════════════
+//  PICKER
+// ══════════════════════════════════════════════
+let _pickerCtx = null;
+
+function openPicker(e, itemId, memberName, deadline, deadtime) {
+  e.stopPropagation();
+  _pickerCtx = { itemId, memberName, deadline, deadtime };
+  const opts = [
+    {val:'0',    label:'待辦',   color:'#9ca3af'},
+    {val:'done', label:'已完成', color:'#16a34a'},
+    {val:'3',    label:'確認中', color:'#d97706'},
+    {val:'na',   label:'N/A',   color:'#6b7280'},
+  ];
+  document.getElementById('picker-title').textContent = memberName;
+  document.getElementById('picker-opts').innerHTML = opts.map(o =>
+    `<div class="picker-opt" onclick="selectStatus('${o.val}')">
+      <span class="picker-dot" style="background:${o.color}"></span>${o.label}
+    </div>`).join('');
+  const pk = document.getElementById('status-picker');
+  const rect = e.currentTarget.getBoundingClientRect();
+  pk.style.display = 'block';
+  pk.style.left = Math.min(rect.left, window.innerWidth-180) + 'px';
+  pk.style.top  = (rect.bottom + 4 + window.scrollY) + 'px';
+}
+
+async function selectStatus(val) {
+  document.getElementById('status-picker').style.display = 'none';
+  if (!_pickerCtx) return;
+  await pushStatus(_pickerCtx.itemId, _pickerCtx.memberName, val);
+  renderMatrix(); renderOverview(); toast('狀態已更新');
+}
+
+document.addEventListener('click', () => {
+  document.getElementById('status-picker').style.display = 'none';
+});
+
+// ══════════════════════════════════════════════
+//  AUTO DEADLINE (type change)
+// ══════════════════════════════════════════════
+function onTypeChange() {
+  const type = document.getElementById('f-type').value;
+  const meta = TYPE_META[type];
+  const hint = document.getElementById('deadline-hint');
+  if (meta && meta.workdays) {
+    const today = new Date();
+    const dl = addWorkdays(today, meta.workdays);
+    document.getElementById('f-deadline').value = dl;
+    document.getElementById('f-deadtime').value = '17:00';
+    hint.textContent = `自動計算：建立日隔天起算 ${meta.workdays} 個工作天 → ${dl} 17:00`;
+  } else {
+    hint.textContent = '';
+  }
+}
+
+// ══════════════════════════════════════════════
+//  ITEMS
+// ══════════════════════════════════════════════
+let _editingItemId = null;
+
+function renderItems() {
+  const fp = document.getElementById('it-person-filter').value;
+  const ft = document.getElementById('it-type-filter').value;
+  let items = G.items;
+  if (fp) items = items.filter(it=>it.members.includes(fp));
+  if (ft) items = items.filter(it=>it.type===ft);
+
+  document.getElementById('items-tbody').innerHTML = items.map(it => {
+    const meta = TYPE_META[it.type] || {};
+    return `<tr>
+      <td><strong>${it.name}</strong></td>
+      <td><span class="task-type-tag ${meta.tag||''}">${meta.label||it.type}</span></td>
+      <td>${it.members.join('、')}</td>
+      <td>${it.deadline||'—'}</td>
+      <td>${it.deadtime||'—'}</td>
+      <td style="max-width:180px;white-space:normal;color:var(--text2)">${it.note||'—'}</td>
+      <td>
+        <button class="btn btn-sm btn-default" onclick="openItemModal('${it.id}')">編輯</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteItem('${it.id}')">刪除</button>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:30px">尚無任務</td></tr>';
+}
+
+function openItemModal(id) {
+  _editingItemId = id || null;
+  document.getElementById('modal-title').textContent = id ? '編輯任務' : '新增任務';
+  document.getElementById('f-members').innerHTML = G.members.map(m =>
+    `<label><input type="checkbox" value="${m.name}"> ${m.name}</label>`).join('');
+  document.getElementById('deadline-hint').textContent = '';
+
+  if (id) {
+    const it = G.items.find(x=>x.id===id);
+    if (it) {
+      document.getElementById('f-name').value     = it.name;
+      document.getElementById('f-type').value     = it.type;
+      document.getElementById('f-deadline').value = it.deadline||'';
+      document.getElementById('f-deadtime').value = it.deadtime||'17:00';
+      document.getElementById('f-note').value     = it.note||'';
+      document.querySelectorAll('#f-members input').forEach(cb => {
+        if (it.members.includes(cb.value)) cb.checked = true;
+      });
+    }
+  } else {
+    document.getElementById('f-name').value     = '';
+    document.getElementById('f-type').value     = 'routine';
+    document.getElementById('f-deadline').value = '';
+    document.getElementById('f-deadtime').value = '17:00';
+    document.getElementById('f-note').value     = '';
+  }
+  document.getElementById('modal-overlay').classList.add('active');
+}
+
+async function saveItem() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { toast('請輸入任務名稱'); return; }
+  const members = Array.from(document.querySelectorAll('#f-members input:checked')).map(x=>x.value);
+  if (!members.length) { toast('請選擇至少一位負責人'); return; }
+
+  const item = {
+    id:       _editingItemId || ('item_'+Date.now()),
+    name,
+    type:     document.getElementById('f-type').value,
+    deadline: document.getElementById('f-deadline').value || '',
+    deadtime: document.getElementById('f-deadtime').value || '17:00',
+    members,
+    note:     document.getElementById('f-note').value.trim()
+  };
+
+  if (_editingItemId) {
+    const idx = G.items.findIndex(x=>x.id===_editingItemId);
+    if (idx>=0) G.items[idx] = item;
+  } else {
+    G.items.push(item);
+  }
+
+  closeModal(); saveLocal();
+  try { await apiGet({ action:'writeItem', item: JSON.stringify(item) }); toast('任務已儲存'); }
+  catch(e) { toast('任務已暫存（離線）'); }
+  renderItems(); renderMatrix(); renderOverview();
+}
+
+async function deleteItem(id) {
+  if (!confirm('確定要刪除這項任務？')) return;
+  G.items = G.items.filter(x=>x.id!==id);
+  saveLocal();
+  try { await apiGet({ action:'deleteItem', id }); toast('任務已刪除'); }
+  catch(e) { toast('刪除已暫存（離線）'); }
+  renderItems(); renderMatrix(); renderOverview();
+}
+
+function closeModal() { document.getElementById('modal-overlay').classList.remove('active'); }
+
+// ══════════════════════════════════════════════
+//  SETTINGS
+// ══════════════════════════════════════════════
+function renderSettings() {
+  // Members
+  document.getElementById('member-list-wrap').innerHTML =
+    `<div class="member-list">${G.members.map((m,i)=>`
+      <div class="member-row">
+        <span class="member-name">👤 ${m.name}</span>
+        <span class="member-empid">🪪 ${m.empId||'—'}</span>
+        <span class="member-pwd">密碼：${'•'.repeat(m.pwd?.length||4)}</span>
+        <button class="btn btn-sm btn-default" onclick="editMember(${i})">編輯密碼</button>
+        <button class="btn btn-sm btn-danger" onclick="removeMember(${i})">移除</button>
+      </div>`).join('')}
+    </div>`;
+
+  // Holidays
+  document.getElementById('holiday-list').innerHTML =
+    G.holidays.map((h,i) => {
+      const note = typeof h==='object' ? `${h.date} ${h.note||''}` : h;
+      const date = typeof h==='object' ? h.date : h;
+      return `<div class="holiday-tag">${note}
+        <button onclick="removeHoliday(${i})" title="移除">×</button>
+      </div>`;
+    }).join('') || '<span style="font-size:12px;color:var(--text2)">尚無假日</span>';
+}
+
+function addMember() {
+  const name  = document.getElementById('new-member-name').value.trim();
+  const empId = document.getElementById('new-member-empid').value.trim();
+  const pwd   = document.getElementById('new-member-pwd').value.trim();
+  if (!name||!empId||!pwd) { toast('請輸入姓名、人事號與密碼'); return; }
+  if (G.members.find(m=>m.empId===empId)) { toast('此人事號已存在'); return; }
+  G.members.push({ name, empId, pwd });
+  document.getElementById('new-member-name').value  = '';
+  document.getElementById('new-member-empid').value = '';
+  document.getElementById('new-member-pwd').value   = '';
+  renderSettings(); populateFilters(); saveSettings();
+}
+
+function editMember(i) {
+  const m = G.members[i];
+  const newPwd = prompt(`修改 ${m.name} 的密碼：`,'');
+  if (newPwd===null) return;
+  if (!newPwd.trim()) { toast('密碼不能為空'); return; }
+  G.members[i].pwd = newPwd.trim();
+  renderSettings(); saveSettings();
+}
+
+function removeMember(i) {
+  if (!confirm(`確定移除 ${G.members[i].name}？`)) return;
+  G.members.splice(i,1);
+  renderSettings(); populateFilters(); saveSettings();
+}
+
+function addHoliday() {
+  const date = document.getElementById('new-holiday').value;
+  const note = document.getElementById('new-holiday-note').value.trim();
+  if (!date) { toast('請選擇假日日期'); return; }
+  const entry = note ? { date, note } : { date, note:'' };
+  // avoid duplicate
+  const exists = G.holidays.some(h=>(typeof h==='object'?h.date:h)===date);
+  if (exists) { toast('此日期已存在'); return; }
+  G.holidays.push(entry);
+  document.getElementById('new-holiday').value = '';
+  document.getElementById('new-holiday-note').value = '';
+  renderSettings(); saveSettings();
+}
+
+function removeHoliday(i) {
+  G.holidays.splice(i,1);
+  renderSettings(); saveSettings();
+}
+
+async function saveSettings() {
+  G.cfg.adminUser = document.getElementById('admin-user').value.trim() || 'admin';
+  const np = document.getElementById('admin-pass').value;
+  if (np) G.cfg.adminPass = np;
+  G.year = parseInt(document.getElementById('cfg-year').value) || G.year;
+  document.getElementById('year-badge').textContent = G.year;
+  saveLocal();
+  try {
+    await apiGet({
+      action: 'saveSettings',
+      members:  JSON.stringify(G.members),
+      holidays: JSON.stringify(G.holidays),
+      cfg:      JSON.stringify(G.cfg),
+      year:     G.year
+    });
+    toast('設定已儲存');
+  } catch(e) { toast('設定已暫存（離線）'); }
+}
+
+// ══════════════════════════════════════════════
+//  LOGIN MODAL
+// ══════════════════════════════════════════════
+function showLoginModal() {
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('login-modal').classList.add('active');
+  setTimeout(()=>document.getElementById('login-user').focus(),100);
+}
+function closeLoginModal() { document.getElementById('login-modal').classList.remove('active'); }
+document.getElementById('login-modal').addEventListener('click', e => {
+  if (e.target===document.getElementById('login-modal')) closeLoginModal();
+});
+
+// ══════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════
+function switchTab(btn) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  const panel = document.getElementById(btn.dataset.panel);
+  if (panel) panel.classList.add('active');
+  const pid = btn.dataset.panel;
+  if (pid==='panel-overview')  renderOverview();
+  if (pid==='panel-matrix')    renderMatrix();
+  if (pid==='panel-items')     renderItems();
+  if (pid==='panel-settings')  renderSettings();
+}
+
+// ══════════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════════
+function showLoading(v) { document.getElementById('loading-overlay').style.display = v?'flex':'none'; }
+function toast(msg, dur=2500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('show'), dur);
+}
+function refreshAll() {
+  renderOverview(); renderMatrix();
+  if (isAdmin()) { renderItems(); renderSettings(); }
+}
+
+loadAll();
+</script>
+</body>
+</html>
