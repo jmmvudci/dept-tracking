@@ -134,7 +134,7 @@ table.matrix tbody tr.group-header td{background:var(--surface2);font-weight:700
 .items-toolbar{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center;}
 .items-table-wrap{overflow-x:auto;}
 table.items-table{border-collapse:collapse;width:100%;background:var(--surface);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);}
-table.items-table th{background:var(--surface2);padding:10px 12px;font-size:12px;font-weight:600;color:var(--text2);text-align:left;border-bottom:2px solid var(--border);position:sticky;top:104px;z-index:10;}
+table.items-table th{background:var(--surface2);padding:10px 12px;font-size:12px;font-weight:600;color:var(--text2);text-align:left;border-bottom:2px solid var(--border);}
 table.items-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle;}
 table.items-table tr:last-child td{border-bottom:none;}
 table.items-table tr:hover td{background:var(--surface2);}
@@ -901,27 +901,32 @@ function openPicker(e, itemId, memberName, deadline, deadtime) {
   dateInput.value = '';
 
   const pk = document.getElementById('status-picker');
+  // 先定位到畫面外避免閃爍
+  pk.style.left = '-9999px';
+  pk.style.top  = '-9999px';
   pk.style.display = 'block';
 
-  // 先量 picker 高度（顯示後才有值）
-  const pkH = pk.offsetHeight || 200;
   const rect = e.currentTarget.getBoundingClientRect();
-  const spaceBelow = window.innerHeight - rect.bottom;
-  const spaceAbove = rect.top;
 
-  // 往下放得下就放下面，否則放上面
-  let top;
-  if (spaceBelow >= pkH + 8) {
-    top = rect.bottom + window.scrollY + 4;
-  } else if (spaceAbove >= pkH + 8) {
-    top = rect.top + window.scrollY - pkH - 4;
-  } else {
-    // 兩側都不夠就貼近底部可見區
-    top = window.scrollY + window.innerHeight - pkH - 12;
-  }
-  const left = Math.min(Math.max(rect.left, 8), window.innerWidth - 220);
-  pk.style.left = left + 'px';
-  pk.style.top  = top + 'px';
+  // 等瀏覽器渲染後再量高度定位
+  requestAnimationFrame(() => {
+    const pkH = pk.offsetHeight;
+    const pkW = pk.offsetWidth;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    let top;
+    if (spaceBelow >= pkH + 8) {
+      top = rect.bottom + window.scrollY + 4;
+    } else if (spaceAbove >= pkH + 8) {
+      top = rect.top + window.scrollY - pkH - 4;
+    } else {
+      top = window.scrollY + window.innerHeight - pkH - 16;
+    }
+    const left = Math.min(Math.max(rect.left, 8), window.innerWidth - pkW - 8);
+    pk.style.left = left + 'px';
+    pk.style.top  = top + 'px';
+  });
 }
 
 async function selectStatus(val) {
