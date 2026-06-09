@@ -380,6 +380,11 @@ table.delay-table tr:last-child td{border-bottom:none;}
 <div id="status-picker">
   <div class="picker-title" id="picker-title"></div>
   <div id="picker-opts"></div>
+  <div id="picker-date-row" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+    <div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:4px;">📅 管理員：指定實際完成日期</div>
+    <input id="picker-date" type="date" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;outline:none;">
+    <div style="font-size:10px;color:var(--text2);margin-top:3px;">留空 = 自動記錄今天</div>
+  </div>
 </div>
 
 <!-- Login Modal -->
@@ -613,12 +618,13 @@ function saveLocal() {
   }));
 }
 
-async function pushStatus(itemId, memberName, val) {
+async function pushStatus(itemId, memberName, val, adminDate) {
   const key = sk(itemId, memberName);
   const old = G.statusMap[key] || { status:'0', completedAt: null };
   const now = nowStr();
   if (val === 'done') {
-    old.completedAt = old.completedAt || now;
+    // 管理員有指定日期就用指定的，否則用現在時間
+    old.completedAt = adminDate || now;
   } else {
     old.completedAt = null;
   }
@@ -885,17 +891,35 @@ function openPicker(e, itemId, memberName, deadline, deadtime) {
     `<div class="picker-opt" onclick="selectStatus('${o.val}')">
       <span class="picker-dot" style="background:${o.color}"></span>${o.label}
     </div>`).join('');
+
+  // 管理員才顯示日期輸入欄
+  const dateRow = document.getElementById('picker-date-row');
+  const dateInput = document.getElementById('picker-date');
+  if (isAdmin()) {
+    dateRow.style.display = 'block';
+    dateInput.value = ''; // 清空，預設今天
+  } else {
+    dateRow.style.display = 'none';
+    dateInput.value = '';
+  }
+
   const pk = document.getElementById('status-picker');
   const rect = e.currentTarget.getBoundingClientRect();
   pk.style.display = 'block';
-  pk.style.left = Math.min(rect.left, window.innerWidth-180) + 'px';
+  pk.style.left = Math.min(rect.left, window.innerWidth-200) + 'px';
   pk.style.top  = (rect.bottom + 4 + window.scrollY) + 'px';
 }
 
 async function selectStatus(val) {
   document.getElementById('status-picker').style.display = 'none';
   if (!_pickerCtx) return;
-  await pushStatus(_pickerCtx.itemId, _pickerCtx.memberName, val);
+  // 管理員可指定完成日期（只對「已完成」狀態有效）
+  let adminDate = null;
+  if (isAdmin() && val === 'done') {
+    const d = document.getElementById('picker-date').value;
+    if (d) adminDate = d + 'T17:00'; // 補時間讓比較一致
+  }
+  await pushStatus(_pickerCtx.itemId, _pickerCtx.memberName, val, adminDate);
   renderMatrix(); renderOverview(); toast('狀態已更新');
 }
 
