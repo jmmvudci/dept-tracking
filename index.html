@@ -263,6 +263,27 @@ table.delay-table tr:last-child td{border-bottom:none;}
     </div>
     <div id="delay-section" style="display:none;margin-top:24px;">
       <div class="section-title" style="color:var(--red)">⚠️ 延遲率統計（管理員限定）</div>
+      <div class="filter-bar" style="margin-bottom:12px;">
+        <label>人員：</label>
+        <select id="dl-person-filter" onchange="renderDelayTable()">
+          <option value="">全部成員</option>
+        </select>
+        <label>任務類型：</label>
+        <select id="dl-type-filter" onchange="renderDelayTable()">
+          <option value="">全部類型</option>
+          <option value="routine">年度例行</option>
+          <option value="temp">臨時交辦</option>
+          <option value="collab">跨人員協作</option>
+          <option value="minutes">會議記錄</option>
+          <option value="trial">臨床試驗合約</option>
+          <option value="doc">公文</option>
+          <option value="meeting">教研部內部會議簡報</option>
+        </select>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="dl-only-delayed" onchange="renderDelayTable()" style="accent-color:var(--red);">
+          <span style="color:var(--red);font-weight:600;">只顯示有延遲的人</span>
+        </label>
+      </div>
       <div class="delay-table-wrap"><table class="delay-table" id="delay-table"></table></div>
     </div>
   </div>
@@ -650,10 +671,11 @@ function calcDelay(memberName) {
 //  FILTERS
 // ══════════════════════════════════════════════
 function populateFilters() {
-  ['ov-person-filter','mx-person-filter','it-person-filter'].forEach(id => {
+  ['ov-person-filter','mx-person-filter','it-person-filter','dl-person-filter'].forEach(id => {
     const sel = document.getElementById(id);
+    if (!sel) return;
     const cur = sel.value;
-    sel.innerHTML = '<option value="">全部成員</option>';
+    sel.innerHTML = id === 'dl-person-filter' ? '<option value="">全部成員</option>' : '<option value="">全部成員</option>';
     G.members.forEach(m => {
       const o = document.createElement('option');
       o.value = m.name; o.textContent = m.name;
@@ -706,16 +728,68 @@ function renderOverview() {
     </div>`;
   }).join('') || '<div style="padding:30px;color:var(--text2)">尚無成員資料</div>';
 
-  if (isAdmin()) {
-    const rows = G.members.map(m => {
-      const dl = calcDelay(m.name);
-      if (!dl) return `<tr><td>${m.name}</td><td>—</td><td>—</td><td>—</td></tr>`;
-      const s = dl.rate>30?'color:var(--red)':dl.rate>10?'color:var(--yellow)':'color:var(--green)';
-      return `<tr><td>${m.name}</td><td>${dl.delayed}</td><td>${dl.total}</td><td style="${s};font-weight:600">${dl.rate}%</td></tr>`;
-    }).join('');
-    document.getElementById('delay-table').innerHTML =
-      `<thead><tr><th>姓名</th><th>延遲筆數</th><th>有截止日任務</th><th>延遲率</th></tr></thead><tbody>${rows}</tbody>`;
+  if (isAdmin()) renderDelayTable();
+}
+
+function renderDelayTable() {
+  if (!isAdmin()) return;
+  const fp         = document.getElementById('dl-person-filter')?.value || '';
+  const ft         = document.getElementById('dl-type-filter')?.value   || '';
+  const onlyDelay  = document.getElementById('dl-only-delayed')?.checked || false;
+
+  // calcDelay but filtered by type
+  function calcDelayFiltered(memberName) {
+    let withDl = G.items.filter(it => it.deadline && it.members.includes(memberName));
+    if (ft) withDl = withDl.filter(it => it.type === ft);
+    if (!withDl.length) return null;
+    let delayed = 0;
+    const delayedItems = [];
+    withDl.forEach(it => {
+      const eff = getEffStatus(it.id, memberName, it.deadline, it.deadtime);
+      if (eff === 'overdue' || eff === 'late') {
+        delayed++;
+        delayedItems.push({ name: it.name, type: it.type, eff });
+      }
+    });
+    return { delayed, total: withDl.length, rate: (delayed/withDl.length*100).toFixed(1), delayedItems };
   }
+
+  const typeLabel = {
+    routine:'年度例行', temp:'臨時交辦', collab:'跨人員協作',
+    minutes:'會議記錄', trial:'臨床試驗合約', doc:'公文', meeting:'教研部內部會議簡報'
+  };
+
+  let members = fp ? G.members.filter(m => m.name === fp) : G.members;
+
+  const rows = members.map(m => {
+    const dl = calcDelayFiltered(m.name);
+    if (!dl) {
+      if (onlyDelay) return '';
+      return `<tr><td>${m.name}</td><td>${ft ? typeLabel[ft]||ft : '全部'}</td><td>—</td><td>—</td><td>—</td></tr>`;
+    }
+    if (onlyDelay && dl.delayed === 0) return '';
+    const s = dl.rate>30 ? 'color:var(--red)' : dl.rate>10 ? 'color:var(--yellow)' : 'color:var(--green)';
+    // Build delayed items sub-list
+    const subList = dl.delayedItems.length
+      ? `<div style="margin-top:4px;font-size:11px;color:var(--text2);">${
+          dl.delayedItems.map(i => {
+            const effLabel = i.eff === 'overdue' ? '⏰逾期未完成' : '⚠️晚交';
+            return `${i.name}（${typeLabel[i.type]||i.type}）${effLabel}`;
+          }).join('、')
+        }</div>` : '';
+    return `<tr>
+      <td><strong>${m.name}</strong></td>
+      <td>${ft ? typeLabel[ft]||ft : '全部'}</td>
+      <td>${dl.delayed}${subList}</td>
+      <td>${dl.total}</td>
+      <td style="${s};font-weight:600">${dl.rate}%</td>
+    </tr>`;
+  }).join('');
+
+  const isEmpty = !rows.replace(/<[^>]+>/g,'').trim();
+  document.getElementById('delay-table').innerHTML =
+    `<thead><tr><th>姓名</th><th>任務類型</th><th>延遲筆數／項目</th><th>有截止日任務</th><th>延遲率</th></tr></thead>
+     <tbody>${isEmpty ? '<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:20px">無符合條件的資料</td></tr>' : rows}</tbody>`;
 }
 
 function filterByPerson(name) {
