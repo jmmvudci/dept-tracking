@@ -206,6 +206,95 @@ table.delay-table tr:last-child td{border-bottom:none;}
 #loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.85);z-index:600;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-size:14px;color:var(--text2);}
 .spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── RESPONSIVE ── */
+/* Tablet (≤900px) */
+@media(max-width:900px){
+  #overview-top{grid-template-columns:1fr;}
+  .notice-board{margin-top:0;}
+  #overview-stats{grid-template-columns:repeat(2,1fr);}
+  #person-cards{grid-template-columns:repeat(2,1fr);}
+}
+
+/* Mobile (≤600px) */
+@media(max-width:600px){
+  /* Header */
+  #header{padding:0 12px;height:48px;gap:8px;}
+  #header h1{font-size:13px;}
+  .year-badge{padding:2px 8px;font-size:11px;}
+  #user-label{display:none;}
+  #login-btn,#logout-btn{padding:4px 10px;font-size:12px;}
+
+  /* Tabs */
+  #tabs{padding:0 4px;gap:0;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .tab-btn{padding:10px 10px;font-size:11px;flex-shrink:0;}
+
+  /* Main */
+  #main{padding:12px;}
+
+  /* Stats */
+  #overview-stats{grid-template-columns:repeat(2,1fr);gap:8px;}
+  .stat-card{padding:12px;}
+  .stat-card .value{font-size:20px;}
+
+  /* Person cards */
+  #person-cards{grid-template-columns:1fr 1fr;gap:8px;}
+  .person-card{padding:12px;}
+  .person-card .name{font-size:13px;}
+
+  /* Notice board */
+  #overview-top{gap:12px;}
+  .notice-board{padding:14px;}
+  .notice-item{padding:6px 0;}
+
+  /* Matrix — 橫向捲動，固定任務欄 */
+  .matrix-wrap{max-height:calc(100vh - 130px);}
+  table.matrix thead th{padding:6px 8px;font-size:11px;}
+  table.matrix thead th.task-col{min-width:140px;max-width:160px;}
+  table.matrix tbody td.task-info{min-width:140px;max-width:160px;padding:6px 8px;}
+  .task-name{font-size:12px;}
+  .task-meta{font-size:10px;}
+  .status-btn{width:48px;height:26px;font-size:10px;}
+  .status-cell{width:52px;min-width:52px;}
+
+  /* Filter bar */
+  .filter-bar{gap:6px;}
+  .filter-bar select,.filter-bar input{font-size:12px;padding:5px 8px;}
+  .filter-bar label{font-size:12px;}
+
+  /* Items — 卡片式 */
+  .items-toolbar{gap:6px;}
+  .items-toolbar .btn{font-size:12px;padding:6px 10px;}
+
+  /* 任務管理表格在手機改為卡片 */
+  table.items-table thead{display:none;}
+  table.items-table tr{display:block;margin-bottom:10px;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface);}
+  table.items-table td{display:flex;align-items:flex-start;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px;}
+  table.items-table td:last-child{border-bottom:none;}
+  table.items-table td::before{content:attr(data-label);font-size:11px;color:var(--text2);font-weight:600;min-width:60px;flex-shrink:0;}
+  table.items-table tr:last-child td:last-child{border-bottom:none;}
+
+  /* Modal */
+  #modal-box{min-width:unset;padding:16px;}
+  .modal-form-2col{grid-template-columns:1fr;}
+  .member-checkbox-grid{grid-template-columns:repeat(3,1fr);}
+
+  /* Settings */
+  .settings-section{padding:14px;}
+  .member-row{flex-wrap:wrap;gap:6px;}
+  .member-row .member-name{min-width:60px;}
+  .member-row .member-empid{min-width:60px;}
+  .form-row input,.form-row select{max-width:100%;}
+
+  /* Delay section */
+  table.delay-table th,table.delay-table td{padding:6px 8px;font-size:11px;}
+
+  /* Login box */
+  #login-box{min-width:unset;padding:20px;width:90vw;}
+
+  /* Meeting modal */
+  #meeting-modal-overlay > div{min-width:unset;padding:16px;width:95vw;}
+}
 </style>
 </head>
 <body>
@@ -1115,13 +1204,13 @@ function renderItems() {
   document.getElementById('items-tbody').innerHTML = items.map(it => {
     const meta = TYPE_META[it.type] || {};
     return `<tr>
-      <td><strong>${it.name}</strong></td>
-      <td><span class="task-type-tag ${meta.tag||''}">${meta.label||it.type}</span></td>
-      <td>${it.members.join('、')}</td>
-      <td>${it.deadline||'—'}</td>
-      <td>${it.deadtime||'—'}</td>
-      <td style="max-width:180px;white-space:normal;color:var(--text2)">${it.note||'—'}</td>
-      <td>
+      <td data-label="任務名稱"><strong>${it.name}</strong></td>
+      <td data-label="類型"><span class="task-type-tag ${meta.tag||''}">${meta.label||it.type}</span></td>
+      <td data-label="負責人">${it.members.join('、')}</td>
+      <td data-label="截止日期">${it.deadline||'—'}</td>
+      <td data-label="截止時間">${it.deadtime||'—'}</td>
+      <td data-label="備註" style="max-width:180px;white-space:normal;color:var(--text2)">${it.note||'—'}</td>
+      <td data-label="操作">
         <button class="btn btn-sm btn-default" onclick="openItemModal('${it.id}')">編輯</button>
         <button class="btn btn-sm btn-danger" onclick="deleteItem('${it.id}')">刪除</button>
       </td>
