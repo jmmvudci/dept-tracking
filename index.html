@@ -381,9 +381,10 @@ table.delay-table tr:last-child td{border-bottom:none;}
   <div class="picker-title" id="picker-title"></div>
   <div id="picker-opts"></div>
   <div id="picker-date-row" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
-    <div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:4px;">📅 管理員：指定實際完成日期</div>
-    <input id="picker-date" type="date" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;outline:none;">
-    <div style="font-size:10px;color:var(--text2);margin-top:3px;">留空 = 自動記錄今天</div>
+    <div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:6px;">📅 管理員：指定實際完成日期</div>
+    <input id="picker-date" type="date" onclick="event.stopPropagation()" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;outline:none;margin-bottom:6px;">
+    <div style="font-size:10px;color:var(--text2);margin-bottom:8px;">留空 = 自動記錄今天</div>
+    <button onclick="event.stopPropagation();confirmDone()" style="width:100%;padding:6px;background:var(--green);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">✓ 確認完成</button>
   </div>
 </div>
 
@@ -892,16 +893,11 @@ function openPicker(e, itemId, memberName, deadline, deadtime) {
       <span class="picker-dot" style="background:${o.color}"></span>${o.label}
     </div>`).join('');
 
-  // 管理員才顯示日期輸入欄
+  // 管理員才顯示日期輸入欄（預設隱藏，點已完成後才展開）
   const dateRow = document.getElementById('picker-date-row');
   const dateInput = document.getElementById('picker-date');
-  if (isAdmin()) {
-    dateRow.style.display = 'block';
-    dateInput.value = ''; // 清空，預設今天
-  } else {
-    dateRow.style.display = 'none';
-    dateInput.value = '';
-  }
+  dateRow.style.display = 'none';
+  dateInput.value = '';
 
   const pk = document.getElementById('status-picker');
   const rect = e.currentTarget.getBoundingClientRect();
@@ -911,20 +907,35 @@ function openPicker(e, itemId, memberName, deadline, deadtime) {
 }
 
 async function selectStatus(val) {
+  // 管理員點「已完成」→ 不立即關閉，顯示日期確認欄
+  if (isAdmin() && val === 'done') {
+    document.getElementById('picker-date-row').style.display = 'block';
+    document.getElementById('picker-date').value = '';
+    document.getElementById('picker-date').focus();
+    _pickerCtx._pendingVal = 'done';
+    return;
+  }
   document.getElementById('status-picker').style.display = 'none';
   if (!_pickerCtx) return;
-  // 管理員可指定完成日期（只對「已完成」狀態有效）
-  let adminDate = null;
-  if (isAdmin() && val === 'done') {
-    const d = document.getElementById('picker-date').value;
-    if (d) adminDate = d + 'T17:00'; // 補時間讓比較一致
-  }
-  await pushStatus(_pickerCtx.itemId, _pickerCtx.memberName, val, adminDate);
+  await pushStatus(_pickerCtx.itemId, _pickerCtx.memberName, val, null);
   renderMatrix(); renderOverview(); toast('狀態已更新');
 }
 
-document.addEventListener('click', () => {
+async function confirmDone() {
   document.getElementById('status-picker').style.display = 'none';
+  if (!_pickerCtx) return;
+  const d = document.getElementById('picker-date').value;
+  const adminDate = d ? d + 'T17:00' : null;
+  await pushStatus(_pickerCtx.itemId, _pickerCtx.memberName, 'done', adminDate);
+  renderMatrix(); renderOverview();
+  toast(d ? `完成日期設為 ${d}` : '狀態已更新（今天）');
+}
+
+document.addEventListener('click', (e) => {
+  const pk = document.getElementById('status-picker');
+  if (!pk.contains(e.target)) {
+    pk.style.display = 'none';
+  }
 });
 
 // ══════════════════════════════════════════════
