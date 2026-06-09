@@ -248,7 +248,15 @@ table.delay-table tr:last-child td{border-bottom:none;}
   .notice-item{padding:6px 0;}
 
   /* Matrix — 橫向捲動，固定任務欄 */
-  .matrix-wrap{max-height:calc(100vh - 130px);}
+  .matrix-wrap{
+    overflow-x:auto;
+    overflow-y:auto;
+    max-height:calc(100vh - 130px);
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+    touch-action:pan-x pan-y;
+  }
+  table.matrix{min-width:600px;}
   table.matrix thead th{padding:6px 8px;font-size:11px;}
   table.matrix thead th.task-col{min-width:140px;max-width:160px;}
   table.matrix tbody td.task-info{min-width:140px;max-width:160px;padding:6px 8px;}
