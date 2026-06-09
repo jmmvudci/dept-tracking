@@ -930,12 +930,31 @@ function openPicker(e, itemId, memberName, deadline, deadtime) {
 }
 
 async function selectStatus(val) {
-  // 管理員點「已完成」→ 不立即關閉，顯示日期確認欄
+  // 管理員點「已完成」→ 不立即關閉，顯示日期確認欄並重新定位
   if (isAdmin() && val === 'done') {
+    const pk = document.getElementById('status-picker');
     document.getElementById('picker-date-row').style.display = 'block';
     document.getElementById('picker-date').value = '';
-    document.getElementById('picker-date').focus();
     _pickerCtx._pendingVal = 'done';
+
+    // 展開後重新計算位置
+    requestAnimationFrame(() => {
+      const pkH = pk.offsetHeight;
+      const pkW = pk.offsetWidth;
+      const curTop  = parseFloat(pk.style.top)  || 0;
+      const curLeft = parseFloat(pk.style.left) || 0;
+
+      // 如果展開後超出視窗底部，往上移
+      const bottomEdge = curTop - window.scrollY + pkH;
+      if (bottomEdge > window.innerHeight - 16) {
+        pk.style.top = Math.max(window.scrollY + 8, curTop - (bottomEdge - window.innerHeight + 16)) + 'px';
+      }
+      // 確保不超出右側
+      if (curLeft + pkW > window.innerWidth - 8) {
+        pk.style.left = (window.innerWidth - pkW - 8) + 'px';
+      }
+      document.getElementById('picker-date').focus();
+    });
     return;
   }
   document.getElementById('status-picker').style.display = 'none';
