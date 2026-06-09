@@ -87,6 +87,11 @@ table.matrix tbody tr:hover td.task-info{background:#f8faff;}
 .tag-trial{background:#fce7f3;color:#9d174d;}
 .tag-doc{background:#e0f2fe;color:#0369a1;}
 .tag-meeting{background:#fef9c3;color:#854d0e;}
+.tag-agenda{background:#ede9fe;color:#5b21b6;}
+.tag-slides{background:#fdf4ff;color:#86198f;}
+/* Meeting group row */
+.meeting-group-row td{background:#fdf4ff!important;font-size:12px;color:#86198f;font-weight:700;padding:4px 12px!important;border-top:2px solid #e9d5ff;}
+.meeting-progress{font-size:11px;color:#86198f;background:#fdf4ff;border-radius:10px;padding:1px 7px;margin-left:6px;font-weight:600;border:1px solid #e9d5ff;}
 
 /* Notice board */
 #overview-top{display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start;margin-bottom:20px;}
@@ -300,6 +305,8 @@ table.delay-table tr:last-child td{border-bottom:none;}
         <option value="routine">年度例行</option>
         <option value="temp">臨時交辦</option>
         <option value="collab">跨人員協作</option>
+        <option value="agenda">會議議程</option>
+        <option value="slides">會議簡報</option>
         <option value="minutes">會議記錄</option>
         <option value="trial">臨床試驗合約</option>
         <option value="doc">公文</option>
@@ -313,6 +320,7 @@ table.delay-table tr:last-child td{border-bottom:none;}
   <div class="panel" id="panel-items">
     <div class="items-toolbar">
       <button class="btn btn-primary" onclick="openItemModal()">＋ 新增任務</button>
+      <button class="btn btn-default" onclick="openMeetingModal()" style="border-color:#a855f7;color:#7c3aed;">🗓 快速建立會議任務</button>
       <div class="filter-bar" style="margin:0">
         <label>人員：</label>
         <select id="it-person-filter" onchange="renderItems()"><option value="">全部</option></select>
@@ -322,6 +330,8 @@ table.delay-table tr:last-child td{border-bottom:none;}
           <option value="routine">年度例行</option>
           <option value="temp">臨時交辦</option>
           <option value="collab">跨人員協作</option>
+          <option value="agenda">會議議程</option>
+          <option value="slides">會議簡報</option>
           <option value="minutes">會議記錄</option>
           <option value="trial">臨床試驗合約</option>
           <option value="doc">公文</option>
@@ -451,6 +461,33 @@ table.delay-table tr:last-child td{border-bottom:none;}
   </div>
 </div>
 
+<!-- Quick Meeting Modal -->
+<div id="meeting-modal-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;display:none;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border-radius:var(--radius);padding:24px;min-width:380px;max-width:500px;width:90vw;box-shadow:var(--shadow-md);">
+    <h2 style="font-size:16px;font-weight:700;margin-bottom:6px;">🗓 快速建立會議任務</h2>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:16px;">自動產生：議程（會議前10工作天）、簡報（前5工作天）、記錄（後5工作天）</p>
+    <div class="modal-form-row">
+      <label>會議名稱 *</label>
+      <input id="mtg-name" placeholder="例：教師聯誼會">
+    </div>
+    <div class="modal-form-row">
+      <label>會議日期 *</label>
+      <input id="mtg-date" type="date">
+    </div>
+    <div class="modal-form-row">
+      <label>負責人 *</label>
+      <div class="member-checkbox-grid" id="mtg-members"></div>
+    </div>
+    <div style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:14px;font-size:12px;color:var(--text2);">
+      <div id="mtg-preview" style="line-height:2;">選擇會議日期後自動顯示截止日</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-default" onclick="closeMeetingModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveMeetingTasks()">建立三筆任務</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -483,7 +520,7 @@ function addWorkdays(fromDate, days) {
   while (counted < days) {
     const dow = d.getDay();
     const ds  = dateStr(d);
-    if (dow !== 0 && dow !== 6 && !G.holidays.includes(ds)) {
+    if (dow !== 0 && dow !== 6 && !G.holidays.some(h=>(typeof h==='object'?h.date:h)===ds)) {
       counted++;
     }
     if (counted < days) d.setDate(d.getDate() + 1);
@@ -506,12 +543,14 @@ function nowStr() {
 //  TYPE CONFIG
 // ══════════════════════════════════════════════
 const TYPE_META = {
-  routine:  { label:'📅 年度例行',        tag:'tag-routine', workdays: null },
-  temp:     { label:'⚡ 臨時交辦',        tag:'tag-temp',    workdays: null },
-  collab:   { label:'🤝 跨人員協作',      tag:'tag-collab',  workdays: null },
-  minutes:  { label:'📝 會議記錄',        tag:'tag-minutes', workdays: 5 },
-  trial:    { label:'🧪 臨床試驗合約',    tag:'tag-trial',   workdays: 5 },
-  doc:      { label:'📄 公文',            tag:'tag-doc',     workdays: 3 },
+  routine:  { label:'📅 年度例行',          tag:'tag-routine', workdays: null },
+  temp:     { label:'⚡ 臨時交辦',          tag:'tag-temp',    workdays: null },
+  collab:   { label:'🤝 跨人員協作',        tag:'tag-collab',  workdays: null },
+  agenda:   { label:'📋 會議議程',          tag:'tag-agenda',  workdays: null },
+  slides:   { label:'🖥 會議簡報',          tag:'tag-slides',  workdays: null },
+  minutes:  { label:'📝 會議記錄',          tag:'tag-minutes', workdays: 5 },
+  trial:    { label:'🧪 臨床試驗合約',      tag:'tag-trial',   workdays: 5 },
+  doc:      { label:'📄 公文',              tag:'tag-doc',     workdays: 3 },
   meeting:  { label:'🗣 教研部內部會議簡報',tag:'tag-meeting', workdays: 5 },
 };
 
@@ -820,48 +859,100 @@ function renderMatrix() {
       '<div style="padding:40px;text-align:center;color:var(--text2)">無資料</div>'; return;
   }
 
-  const typeOrder = ['routine','temp','collab','minutes','trial','doc','meeting'];
+  const typeOrder = ['routine','temp','collab','minutes','trial','doc','meeting','agenda','slides'];
   const typeLabel = {
     routine:'📅 年度例行業務', temp:'⚡ 臨時交辦任務', collab:'🤝 跨人員協作項目',
+    agenda:'📋 會議議程', slides:'🖥 會議簡報',
     minutes:'📝 會議記錄', trial:'🧪 臨床試驗合約', doc:'📄 公文',
     meeting:'🗣 教研部內部會議簡報'
   };
+
+  // 把有 meetingGroup 的任務依 group 聚合，其餘照原本 typeOrder
+  // 找出所有 meetingGroup
+  const meetingGroups = {};
+  items.forEach(it => {
+    if (it.meetingGroup) {
+      if (!meetingGroups[it.meetingGroup]) meetingGroups[it.meetingGroup] = [];
+      meetingGroups[it.meetingGroup].push(it);
+    }
+  });
+  const groupedItemIds = new Set(items.filter(it=>it.meetingGroup).map(it=>it.id));
 
   let html = `<table class="matrix"><thead><tr>
     <th class="task-col">任務</th>
     ${members.map(m=>`<th>${m.name}</th>`).join('')}
   </tr></thead><tbody>`;
 
+  // 先輸出非 meetingGroup 的一般任務
   typeOrder.forEach(type => {
-    const group = items.filter(it=>it.type===type);
+    const group = items.filter(it=>it.type===type && !it.meetingGroup);
     if (!group.length) return;
-    html += `<tr class="group-header"><td colspan="${members.length+1}">${typeLabel[type]}</td></tr>`;
-    group.forEach(it => {
-      const deadlineDisplay = it.deadline
-        ? (it.deadtime ? `${it.deadline} ${it.deadtime}` : it.deadline)
-        : '無截止日';
-      html += `<tr><td class="task-info">
-        <div class="task-name">${it.name}</div>
-        <div class="task-meta">📅 ${deadlineDisplay}${it.note?` ｜ ${it.note}`:''}</div>
-      </td>`;
-      members.forEach(m => {
-        if (!it.members.includes(m.name)) {
-          html += `<td class="status-cell"><button class="status-btn not-assigned">—</button></td>`; return;
-        }
-        const eff = getEffStatus(it.id, m.name, it.deadline, it.deadtime);
-        const {label, cls} = statusDisplay(eff);
-        const canEdit = isAdmin() || currentUser()===m.name;
-        const click = canEdit
-          ? `onclick="openPicker(event,'${it.id}','${m.name}','${it.deadline||''}','${it.deadtime||''}')"` : '';
-        html += `<td class="status-cell"><button class="status-btn ${cls}" ${click}>${label}</button></td>`;
-      });
-      html += '</tr>';
+    html += `<tr class="group-header"><td colspan="${members.length+1}">${typeLabel[type]||type}</td></tr>`;
+    group.forEach(it => { html += renderItemRow(it, members); });
+  });
+
+  // 再輸出 meetingGroup 任務（每個會議一個區塊）
+  Object.entries(meetingGroups).forEach(([gid, gitems]) => {
+    // 排序：議程 → 簡報 → 記錄
+    const order = ['agenda','slides','minutes'];
+    gitems.sort((a,b) => order.indexOf(a.type) - order.indexOf(b.type));
+    const groupName = gitems[0]?.meetingGroupName || gid;
+    const groupDate = gitems[0]?.meetingDate || '';
+
+    // 計算每位成員的 X/3
+    const progressByMember = {};
+    members.forEach(m => {
+      const assigned = gitems.filter(it => it.members.includes(m.name));
+      if (!assigned.length) { progressByMember[m.name] = null; return; }
+      const done = assigned.filter(it => {
+        const e = getEffStatus(it.id, m.name, it.deadline, it.deadtime);
+        return e === 'done' || e === 'late';
+      }).length;
+      progressByMember[m.name] = `${done}/${assigned.length}`;
     });
+
+    const progressCells = members.map(m => {
+      const p = progressByMember[m.name];
+      if (p === null) return `<td style="background:var(--surface2);border:1px solid var(--border);text-align:center;font-size:11px;color:var(--text2)">—</td>`;
+      const allDone = p.split('/')[0] === p.split('/')[1];
+      const color = allDone ? 'var(--green)' : 'var(--accent)';
+      return `<td style="background:var(--surface2);border:1px solid var(--border);text-align:center;">
+        <span style="font-size:12px;font-weight:700;color:${color}">${p}</span>
+      </td>`;
+    }).join('');
+
+    html += `<tr class="meeting-group-row">
+      <td colspan="1">📅 ${groupName}${groupDate ? ` — 會議日：${groupDate}` : ''}</td>
+      ${progressCells}
+    </tr>`;
+    gitems.forEach(it => { html += renderItemRow(it, members, true); });
   });
 
   html += '</tbody></table>';
   document.getElementById('matrix-container').innerHTML = html;
 }
+
+function renderItemRow(it, members, indent) {
+  const deadlineDisplay = it.deadline
+    ? (it.deadtime ? `${it.deadline} ${it.deadtime}` : it.deadline)
+    : '無截止日';
+  let html = `<tr><td class="task-info" style="${indent?'padding-left:24px!important':''}">
+    <div class="task-name">${it.name}</div>
+    <div class="task-meta">📅 ${deadlineDisplay}${it.note?` ｜ ${it.note}`:''}</div>
+  </td>`;
+  members.forEach(m => {
+    if (!it.members.includes(m.name)) {
+      html += `<td class="status-cell"><button class="status-btn not-assigned">—</button></td>`; return;
+    }
+    const eff = getEffStatus(it.id, m.name, it.deadline, it.deadtime);
+    const {label, cls} = statusDisplay(eff);
+    const canEdit = isAdmin() || currentUser()===m.name;
+    const click = canEdit
+      ? `onclick="openPicker(event,'${it.id}','${m.name}','${it.deadline||''}','${it.deadtime||''}')"` : '';
+    html += `<td class="status-cell"><button class="status-btn ${cls}" ${click}>${label}</button></td>`;
+  });
+  html += '</tr>';
+  return html;
 
 function statusDisplay(eff) {
   return ({
@@ -1095,6 +1186,85 @@ async function deleteItem(id) {
 }
 
 function closeModal() { document.getElementById('modal-overlay').classList.remove('active'); }
+
+// ══════════════════════════════════════════════
+//  SUBTRACT WORKDAYS (往前推)
+// ══════════════════════════════════════════════
+function subtractWorkdays(fromDateStr, days) {
+  // 從指定日期往前推 days 個工作天
+  let d = new Date(fromDateStr);
+  let counted = 0;
+  while (counted < days) {
+    d.setDate(d.getDate() - 1);
+    const dow = d.getDay();
+    const ds  = dateStr(d);
+    const isHoliday = G.holidays.some(h => (typeof h==='object'?h.date:h) === ds);
+    if (dow !== 0 && dow !== 6 && !isHoliday) counted++;
+  }
+  return dateStr(d);
+}
+
+// ══════════════════════════════════════════════
+//  MEETING MODAL
+// ══════════════════════════════════════════════
+function openMeetingModal() {
+  document.getElementById('mtg-name').value = '';
+  document.getElementById('mtg-date').value = '';
+  document.getElementById('mtg-preview').innerHTML = '選擇會議日期後自動顯示截止日';
+  document.getElementById('mtg-members').innerHTML = G.members.map(m =>
+    `<label><input type="checkbox" value="${m.name}"> ${m.name}</label>`).join('');
+  document.getElementById('meeting-modal-overlay').style.display = 'flex';
+}
+
+function closeMeetingModal() {
+  document.getElementById('meeting-modal-overlay').style.display = 'none';
+}
+
+document.getElementById('mtg-date').addEventListener('change', function() {
+  const d = this.value;
+  if (!d) { document.getElementById('mtg-preview').innerHTML = '選擇會議日期後自動顯示截止日'; return; }
+  const agendaDL  = subtractWorkdays(d, 10);
+  const slidesDL  = subtractWorkdays(d, 5);
+  const minutesDL = addWorkdays(new Date(d), 5);
+  document.getElementById('mtg-preview').innerHTML = `
+    <div>📋 會議議程截止：<strong>${agendaDL} 17:00</strong>（會議前10工作天）</div>
+    <div>🖥 會議簡報截止：<strong>${slidesDL} 17:00</strong>（會議前5工作天）</div>
+    <div>📝 會議記錄截止：<strong>${minutesDL} 17:00</strong>（會議後5工作天）</div>
+  `;
+});
+
+async function saveMeetingTasks() {
+  const name = document.getElementById('mtg-name').value.trim();
+  const date = document.getElementById('mtg-date').value;
+  if (!name) { toast('請輸入會議名稱'); return; }
+  if (!date) { toast('請選擇會議日期'); return; }
+  const members = Array.from(document.querySelectorAll('#mtg-members input:checked')).map(x=>x.value);
+  if (!members.length) { toast('請選擇至少一位負責人'); return; }
+
+  const gid = 'mtg_' + Date.now();
+  const agendaDL  = subtractWorkdays(date, 10);
+  const slidesDL  = subtractWorkdays(date, 5);
+  const minutesDL = addWorkdays(new Date(date), 5);
+
+  const tasks = [
+    { id:'item_'+Date.now()+'_1', name:`${name} 會議議程`, type:'agenda',  deadline:agendaDL,  deadtime:'17:00', members, note:'', meetingGroup:gid, meetingGroupName:name, meetingDate:date },
+    { id:'item_'+Date.now()+'_2', name:`${name} 會議簡報`, type:'slides',  deadline:slidesDL,  deadtime:'17:00', members, note:'', meetingGroup:gid, meetingGroupName:name, meetingDate:date },
+    { id:'item_'+Date.now()+'_3', name:`${name} 會議記錄`, type:'minutes', deadline:minutesDL, deadtime:'17:00', members, note:'', meetingGroup:gid, meetingGroupName:name, meetingDate:date },
+  ];
+
+  tasks.forEach(t => G.items.push(t));
+  closeMeetingModal();
+  saveLocal();
+  try {
+    for (const t of tasks) {
+      await apiGet({ action:'writeItem', item: JSON.stringify(t) });
+    }
+    toast(`已建立「${name}」三筆任務`);
+  } catch(e) {
+    toast('任務已暫存（離線）');
+  }
+  renderItems(); renderMatrix(); renderOverview();
+}
 
 // ══════════════════════════════════════════════
 //  SETTINGS
