@@ -253,7 +253,7 @@ table.delay-table tr:last-child td{border-bottom:none;}
         <div class="notice-item">
           <div class="notice-num">二</div>
           <div class="notice-text">
-            會議任務（快速建立）<br>
+            會議任務<br>
             <span style="font-size:11px;color:var(--text2);line-height:2;">
               📋 會議議程<span class="notice-days">會議前 10 工作天</span><br>
               🖥 會議簡報<span class="notice-days">會議前 5 工作天</span><br>
@@ -366,6 +366,7 @@ table.delay-table tr:last-child td{border-bottom:none;}
         <input id="new-member-name" placeholder="姓名" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:100px;outline:none;">
         <input id="new-member-empid" placeholder="人事號（帳號）" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:130px;outline:none;">
         <input id="new-member-pwd" placeholder="密碼" type="password" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:120px;outline:none;">
+        <input id="new-member-email" placeholder="Email（通知用）" type="email" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;width:180px;outline:none;">
         <button class="btn btn-primary" onclick="addMember()">新增成員</button>
       </div>
     </div>
@@ -1286,8 +1287,8 @@ function renderSettings() {
       <div class="member-row">
         <span class="member-name">👤 ${m.name}</span>
         <span class="member-empid">🪪 ${m.empId||'—'}</span>
-        <span class="member-pwd">密碼：${'•'.repeat(m.pwd?.length||4)}</span>
-        <button class="btn btn-sm btn-default" onclick="editMember(${i})">編輯密碼</button>
+        <span style="font-size:12px;color:var(--text2);flex:1;">✉️ ${m.email||'未設定'}</span>
+        <button class="btn btn-sm btn-default" onclick="editMember(${i})">編輯</button>
         <button class="btn btn-sm btn-danger" onclick="removeMember(${i})">移除</button>
       </div>`).join('')}
     </div>`;
@@ -1307,21 +1308,25 @@ function addMember() {
   const name  = document.getElementById('new-member-name').value.trim();
   const empId = document.getElementById('new-member-empid').value.trim();
   const pwd   = document.getElementById('new-member-pwd').value.trim();
+  const email = document.getElementById('new-member-email').value.trim();
   if (!name||!empId||!pwd) { toast('請輸入姓名、人事號與密碼'); return; }
   if (G.members.find(m=>m.empId===empId)) { toast('此人事號已存在'); return; }
-  G.members.push({ name, empId, pwd });
+  G.members.push({ name, empId, pwd, email });
   document.getElementById('new-member-name').value  = '';
   document.getElementById('new-member-empid').value = '';
   document.getElementById('new-member-pwd').value   = '';
+  document.getElementById('new-member-email').value = '';
   renderSettings(); populateFilters(); saveSettings();
 }
 
 function editMember(i) {
   const m = G.members[i];
-  const newPwd = prompt(`修改 ${m.name} 的密碼：`,'');
-  if (newPwd===null) return;
-  if (!newPwd.trim()) { toast('密碼不能為空'); return; }
-  G.members[i].pwd = newPwd.trim();
+  const newPwd = prompt(`修改 ${m.name} 的密碼（留空不修改）：`, '');
+  if (newPwd === null) return;
+  if (newPwd.trim()) G.members[i].pwd = newPwd.trim();
+  const newEmail = prompt(`修改 ${m.name} 的 Email（留空不修改）：`, m.email||'');
+  if (newEmail === null) return;
+  if (newEmail.trim()) G.members[i].email = newEmail.trim();
   renderSettings(); saveSettings();
 }
 
