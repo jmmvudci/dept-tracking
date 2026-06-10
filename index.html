@@ -1487,10 +1487,12 @@ function removeHoliday(i) {
 }
 
 async function saveSettings() {
-  G.cfg.adminUser = document.getElementById('admin-user').value.trim() || 'admin';
-  const np = document.getElementById('admin-pass').value;
-  if (np) G.cfg.adminPass = np;
-  G.year = parseInt(document.getElementById('cfg-year').value) || G.year;
+  const adminUserEl = document.getElementById('admin-user');
+  const adminPassEl = document.getElementById('admin-pass');
+  const cfgYearEl   = document.getElementById('cfg-year');
+  if (adminUserEl?.value.trim()) G.cfg.adminUser = adminUserEl.value.trim();
+  if (adminPassEl?.value)        G.cfg.adminPass = adminPassEl.value;
+  if (cfgYearEl?.value)          G.year = parseInt(cfgYearEl.value) || G.year;
   document.getElementById('year-badge').textContent = G.year;
   saveLocal();
   try {
