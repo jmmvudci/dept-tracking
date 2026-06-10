@@ -218,7 +218,10 @@ table.delay-table tr:last-child td{border-bottom:none;}
 
 /* Mobile (≤600px) */
 @media(max-width:600px){
-  /* Header */
+  body{height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
+  #header,#tabs{flex-shrink:0;}
+  #main{flex:1;overflow-y:auto;overflow-x:hidden;padding:12px;display:flex;flex-direction:column;}
+  .panel.active{flex:1;display:flex;flex-direction:column;}
   #header{padding:0 12px;height:48px;gap:8px;}
   #header h1{font-size:13px;}
   .year-badge{padding:2px 8px;font-size:11px;}
@@ -228,9 +231,6 @@ table.delay-table tr:last-child td{border-bottom:none;}
   /* Tabs */
   #tabs{padding:0 4px;gap:0;overflow-x:auto;-webkit-overflow-scrolling:touch;}
   .tab-btn{padding:10px 10px;font-size:11px;flex-shrink:0;}
-
-  /* Main */
-  #main{padding:12px;}
 
   /* Stats */
   #overview-stats{grid-template-columns:repeat(2,1fr);gap:8px;}
@@ -250,12 +250,12 @@ table.delay-table tr:last-child td{border-bottom:none;}
   #panel-matrix.active{
     display:flex;
     flex-direction:column;
-    height:calc(100vh - 104px);
     overflow:hidden;
   }
   #panel-matrix .filter-bar{flex-shrink:0;}
   .matrix-wrap{
     flex:1;
+    min-height:300px;
     overflow:auto;
     -webkit-overflow-scrolling:touch;
     overscroll-behavior:contain;
@@ -835,10 +835,10 @@ function populateFilters() {
     const sel = document.getElementById(id);
     if (!sel) return;
     const cur = sel.value;
-    sel.innerHTML = id === 'dl-person-filter' ? '<option value="">全部成員</option>' : '<option value="">全部成員</option>';
-    G.members.forEach(m => {
+    sel.innerHTML = '<option value="">全部成員</option>';
+    visibleMembers().forEach(m => {
       const o = document.createElement('option');
-      o.value = m.name; o.textContent = m.name;
+      o.value = m.name; o.textContent = m.name + (m.hidden ? ' 🔒' : '');
       sel.appendChild(o);
     });
     sel.value = cur;
@@ -850,10 +850,12 @@ function populateFilters() {
 // ══════════════════════════════════════════════
 function renderOverview() {
   const fp = document.getElementById('ov-person-filter').value;
-  const members = fp ? G.members.filter(m => m.name === fp) : G.members;
+  const members = fp
+    ? visibleMembers().filter(m => m.name === fp)
+    : visibleMembers();
 
   let done=0, overdue=0;
-  G.members.forEach(m => G.items.forEach(it => {
+  visibleMembers().forEach(m => G.items.forEach(it => {
     if (!it.members.includes(m.name)) return;
     const e = getEffStatus(it.id, m.name, it.deadline, it.deadtime);
     if (e==='done'||e==='late') done++;
@@ -963,7 +965,9 @@ function filterByPerson(name) {
 function renderMatrix() {
   const fp = document.getElementById('mx-person-filter').value;
   const ft = document.getElementById('mx-type-filter').value;
-  let members = fp ? G.members.filter(m=>m.name===fp) : G.members;
+  let members = fp
+    ? visibleMembers().filter(m=>m.name===fp)
+    : visibleMembers();
   let items   = ft ? G.items.filter(it=>it.type===ft)  : G.items;
   if (fp) items = items.filter(it=>it.members.includes(fp));
 
@@ -1391,6 +1395,10 @@ function renderSettings() {
         <span class="member-name">👤 ${m.name}</span>
         <span class="member-empid">🪪 ${m.empId||'—'}</span>
         <span style="font-size:12px;color:var(--text2);flex:1;">✉️ ${m.email||'未設定'}</span>
+        <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;color:var(--red);white-space:nowrap;">
+          <input type="checkbox" ${m.hidden?'checked':''} onchange="toggleHidden(${i},this.checked)" style="accent-color:var(--red);">
+          隱藏
+        </label>
         <button class="btn btn-sm btn-default" onclick="editMember(${i})">編輯</button>
         <button class="btn btn-sm btn-danger" onclick="removeMember(${i})">移除</button>
       </div>`).join('')}
@@ -1414,7 +1422,7 @@ function addMember() {
   const email = document.getElementById('new-member-email').value.trim();
   if (!name||!empId||!pwd) { toast('請輸入姓名、人事號與密碼'); return; }
   if (G.members.find(m=>m.empId===empId)) { toast('此人事號已存在'); return; }
-  G.members.push({ name, empId, pwd, email });
+  G.members.push({ name, empId, pwd, email, hidden: false });
   document.getElementById('new-member-name').value  = '';
   document.getElementById('new-member-empid').value = '';
   document.getElementById('new-member-pwd').value   = '';
@@ -1431,6 +1439,26 @@ function editMember(i) {
   if (newEmail === null) return;
   if (newEmail.trim()) G.members[i].email = newEmail.trim();
   renderSettings(); saveSettings();
+}
+
+function toggleHidden(i, val) {
+  G.members[i].hidden = val;
+  saveSettings();
+  renderOverview(); renderMatrix();
+  toast(val ? `${G.members[i].name} 已設為隱藏` : `${G.members[i].name} 已取消隱藏`);
+}
+
+// 依登入身分決定可見的成員清單
+function visibleMembers() {
+  const user = currentUser();
+  if (isAdmin()) return G.members;
+  if (!user) return G.members.filter(m => !m.hidden);
+  const self = G.members.find(m => m.name === user);
+  if (self?.hidden) {
+    // 隱藏人員：自己 + 非隱藏人員
+    return G.members.filter(m => !m.hidden || m.name === user);
+  }
+  return G.members.filter(m => !m.hidden);
 }
 
 function removeMember(i) {
