@@ -1078,7 +1078,7 @@ function statusDisplay(eff) {
     'done':   {label:'完成',   cls:'sdone'},
     'late':   {label:'晚交',   cls:'slate'},
     'overdue':{label:'逾期',   cls:'soverdue'},
-    '3':      {label:'確認中', cls:'s3'},
+    '3':      {label:'待確認', cls:'s3'},
     'na':     {label:'N/A',   cls:'s0'},
   })[eff] || {label:eff, cls:'s0'};
 }
@@ -1091,12 +1091,14 @@ let _pickerCtx = null;
 function openPicker(e, itemId, memberName, deadline, deadtime) {
   e.stopPropagation();
   _pickerCtx = { itemId, memberName, deadline, deadtime };
-  const opts = [
+  const allOpts = [
     {val:'0',    label:'待辦',   color:'#9ca3af'},
     {val:'done', label:'已完成', color:'#16a34a'},
-    {val:'3',    label:'確認中', color:'#d97706'},
+    {val:'3',    label:'待確認', color:'#d97706'},
     {val:'na',   label:'N/A',   color:'#6b7280'},
   ];
+  // 一般成員只能選「待辦」和「已完成」
+  const opts = isAdmin() ? allOpts : allOpts.filter(o => o.val === '0' || o.val === 'done');
   document.getElementById('picker-title').textContent = memberName;
   document.getElementById('picker-opts').innerHTML = opts.map(o =>
     `<div class="picker-opt" onclick="selectStatus('${o.val}')">
