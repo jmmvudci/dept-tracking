@@ -89,6 +89,7 @@ table.matrix tbody tr:hover td.task-info{background:#f8faff;}
 .tag-meeting{background:#fef9c3;color:#854d0e;}
 .tag-agenda{background:#ede9fe;color:#5b21b6;}
 .tag-slides{background:#fdf4ff;color:#86198f;}
+.tag-meetingtrack{background:#e0f9f4;color:#0f766e;}
 /* Meeting group row */
 .meeting-group-row td{background:#fdf4ff!important;font-size:12px;color:#86198f;font-weight:700;padding:4px 12px!important;border-top:2px solid #e9d5ff;}
 .meeting-progress{font-size:11px;color:#86198f;background:#fdf4ff;border-radius:10px;padding:1px 7px;margin-left:6px;font-weight:600;border:1px solid #e9d5ff;}
@@ -372,6 +373,10 @@ table.delay-table tr:last-child td{border-bottom:none;}
           <div class="notice-num">四</div>
           <div class="notice-text">教研部內部會議簡報<span class="notice-days">5 個工作天</span>完成</div>
         </div>
+        <div class="notice-item">
+          <div class="notice-num">五</div>
+          <div class="notice-text">教學研究部相關會議<span class="notice-days">5 個工作天</span>完成</div>
+        </div>
         <div style="margin-top:12px;font-size:11px;color:var(--text2);line-height:1.6;">
           ※ 工作天從建立日隔天起算，排除週六日及國定假日
         </div>
@@ -394,6 +399,7 @@ table.delay-table tr:last-child td{border-bottom:none;}
           <option value="trial">臨床試驗合約</option>
           <option value="doc">公文</option>
           <option value="meeting">教研部內部會議簡報</option>
+          <option value="meetingtrack">會議追蹤</option>
         </select>
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
           <input type="checkbox" id="dl-only-delayed" onchange="renderDelayTable()" style="accent-color:var(--red);">
@@ -421,6 +427,7 @@ table.delay-table tr:last-child td{border-bottom:none;}
         <option value="trial">臨床試驗合約</option>
         <option value="doc">公文</option>
         <option value="meeting">教研部內部會議簡報</option>
+        <option value="meetingtrack">會議追蹤</option>
       </select>
     </div>
     <div class="matrix-wrap" id="matrix-container"></div>
@@ -446,6 +453,7 @@ table.delay-table tr:last-child td{border-bottom:none;}
           <option value="trial">臨床試驗合約</option>
           <option value="doc">公文</option>
           <option value="meeting">教研部內部會議簡報</option>
+          <option value="meetingtrack">會議追蹤</option>
         </select>
       </div>
     </div>
@@ -546,6 +554,7 @@ table.delay-table tr:last-child td{border-bottom:none;}
         <option value="trial">🧪 臨床試驗合約（5工作天）</option>
         <option value="doc">📄 公文（3工作天）</option>
         <option value="meeting">🗣 教研部內部會議簡報（5工作天）</option>
+        <option value="meetingtrack">🗂 會議追蹤（5工作天）</option>
       </select>
     </div>
     <div class="modal-form-2col">
@@ -621,6 +630,28 @@ const G = {
   cfg: { adminUser:'admin', adminPass:'admin' }
 };
 
+// 內建假日（不需手動設定；與 Sheet 假日合併，去重）
+const BUILTIN_HOLIDAYS = [
+  { date:'2027-01-01', note:'元旦' },
+  { date:'2027-02-05', note:'春節' },
+  { date:'2027-02-08', note:'春節' },
+  { date:'2027-02-09', note:'春節' },
+  { date:'2027-02-10', note:'春節' },
+  { date:'2027-04-02', note:'兒童節補假' },
+  { date:'2027-05-03', note:'勞動節補假' },
+  { date:'2027-06-09', note:'端午節' },
+  { date:'2027-09-13', note:'中秋節' },
+  { date:'2027-10-11', note:'國慶日' },
+  { date:'2027-12-24', note:'行憲紀念日補假' },
+];
+
+function mergeBuiltinHolidays() {
+  const existingDates = new Set(G.holidays.map(h => typeof h==='object' ? h.date : h));
+  BUILTIN_HOLIDAYS.forEach(h => {
+    if (!existingDates.has(h.date)) G.holidays.push(h);
+  });
+}
+
 // ══════════════════════════════════════════════
 //  WORKING-DAY CALCULATOR
 // ══════════════════════════════════════════════
@@ -656,15 +687,16 @@ function nowStr() {
 //  TYPE CONFIG
 // ══════════════════════════════════════════════
 const TYPE_META = {
-  routine:  { label:'📅 年度例行',          tag:'tag-routine', workdays: null },
-  temp:     { label:'⚡ 臨時交辦',          tag:'tag-temp',    workdays: null },
-  collab:   { label:'🤝 跨人員協作',        tag:'tag-collab',  workdays: null },
-  agenda:   { label:'📋 會議議程',          tag:'tag-agenda',  workdays: null },
-  slides:   { label:'🖥 會議簡報',          tag:'tag-slides',  workdays: null },
-  minutes:  { label:'📝 會議記錄',          tag:'tag-minutes', workdays: 5 },
-  trial:    { label:'🧪 臨床試驗合約',      tag:'tag-trial',   workdays: 5 },
-  doc:      { label:'📄 公文',              tag:'tag-doc',     workdays: 3 },
-  meeting:  { label:'🗣 教研部內部會議簡報',tag:'tag-meeting', workdays: 5 },
+  routine:      { label:'📅 年度例行',          tag:'tag-routine',      workdays: null },
+  temp:         { label:'⚡ 臨時交辦',          tag:'tag-temp',         workdays: null },
+  collab:       { label:'🤝 跨人員協作',        tag:'tag-collab',       workdays: null },
+  agenda:       { label:'📋 會議議程',          tag:'tag-agenda',       workdays: null },
+  slides:       { label:'🖥 會議簡報',          tag:'tag-slides',       workdays: null },
+  minutes:      { label:'📝 會議記錄',          tag:'tag-minutes',      workdays: 5 },
+  trial:        { label:'🧪 臨床試驗合約',      tag:'tag-trial',        workdays: 5 },
+  doc:          { label:'📄 公文',              tag:'tag-doc',          workdays: 3 },
+  meeting:      { label:'🗣 教研部內部會議簡報',tag:'tag-meeting',      workdays: 5 },
+  meetingtrack: { label:'🗂 會議追蹤',          tag:'tag-meetingtrack', workdays: 5 },
 };
 
 // ══════════════════════════════════════════════
@@ -676,7 +708,11 @@ function session(k, v) {
   else sessionStorage.setItem(k, v);
 }
 function isAdmin()    { return !!session('wt_admin'); }
+function isSubAdmin() { return !!session('wt_subadmin'); }
 function currentUser(){ return session('wt_user') || null; }
+
+// 副管理員固定帳號（帳號=密碼）
+const SUBADMIN_ACCOUNTS = ['980857','A80668','B31061','B40465','B50385'];
 
 function doLogin() {
   const u = document.getElementById('login-user').value.trim();
@@ -686,6 +722,12 @@ function doLogin() {
   if (u === G.cfg.adminUser && p === G.cfg.adminPass) {
     session('wt_admin','1'); session('wt_user','管理員');
     closeLoginModal(); applyAuth(); toast('已以管理員身分登入'); refreshAll();
+    return;
+  }
+  // 副管理員驗證（帳號=密碼）
+  if (SUBADMIN_ACCOUNTS.includes(u) && p === u) {
+    session('wt_subadmin','1'); session('wt_user', `副管理員(${u})`);
+    closeLoginModal(); applyAuth(); toast('已以副管理員身分登入'); refreshAll();
     return;
   }
   const m = G.members.find(x => x.empId === u && x.pwd === p);
@@ -698,7 +740,7 @@ function doLogin() {
 }
 
 function doLogout() {
-  ['wt_admin','wt_user'].forEach(k => session(k, null));
+  ['wt_admin','wt_subadmin','wt_user'].forEach(k => session(k, null));
   applyAuth(); toast('已登出'); refreshAll();
 }
 
@@ -707,8 +749,11 @@ function applyAuth() {
   document.getElementById('user-label').textContent = user ? `👤 ${user}` : '';
   document.getElementById('login-btn').style.display  = user ? 'none' : '';
   document.getElementById('logout-btn').style.display = user ? '' : 'none';
-  document.getElementById('tab-items').classList.toggle('hidden', !isAdmin());
+  // 任務管理：管理員 + 副管理員可見
+  document.getElementById('tab-items').classList.toggle('hidden', !isAdmin() && !isSubAdmin());
+  // 設定頁：僅管理員可見
   document.getElementById('tab-settings').classList.toggle('hidden', !isAdmin());
+  // 延遲率：僅管理員可見
   document.getElementById('delay-section').style.display = isAdmin() ? '' : 'none';
 }
 
@@ -737,11 +782,13 @@ async function loadAll() {
     G.year      = d.year || G.year;
     G.statusMap = {};
     (d.statuses||[]).forEach(r => { G.statusMap[r.key] = safeParseEntry(r.value); });
+    mergeBuiltinHolidays();
     document.getElementById('year-badge').textContent = G.year;
     document.getElementById('cfg-year').value = G.year;
     document.getElementById('admin-user').value = G.cfg.adminUser || '';
   } catch(e) {
     loadLocal();
+    mergeBuiltinHolidays();
   }
   showLoading(false);
   applyAuth(); populateFilters(); refreshAll();
@@ -918,7 +965,8 @@ function renderDelayTable() {
 
   const typeLabel = {
     routine:'年度例行', temp:'臨時交辦', collab:'跨人員協作',
-    minutes:'會議記錄', trial:'臨床試驗合約', doc:'公文', meeting:'教研部內部會議簡報'
+    minutes:'會議記錄', trial:'臨床試驗合約', doc:'公文',
+    meeting:'教研部內部會議簡報', meetingtrack:'會議追蹤'
   };
 
   let members = fp ? G.members.filter(m => m.name === fp) : G.members;
@@ -976,12 +1024,12 @@ function renderMatrix() {
       '<div style="padding:40px;text-align:center;color:var(--text2)">無資料</div>'; return;
   }
 
-  const typeOrder = ['routine','temp','collab','minutes','trial','doc','meeting','agenda','slides'];
+  const typeOrder = ['routine','temp','collab','minutes','trial','doc','meeting','meetingtrack','agenda','slides'];
   const typeLabel = {
     routine:'📅 年度例行業務', temp:'⚡ 臨時交辦任務', collab:'🤝 跨人員協作項目',
     agenda:'📋 會議議程', slides:'🖥 會議簡報',
     minutes:'📝 會議記錄', trial:'🧪 臨床試驗合約', doc:'📄 公文',
-    meeting:'🗣 教研部內部會議簡報'
+    meeting:'🗣 教研部內部會議簡報', meetingtrack:'🗂 會議追蹤'
   };
 
   // 把有 meetingGroup 的任務依 group 聚合，其餘照原本 typeOrder
@@ -1063,7 +1111,7 @@ function renderItemRow(it, members, indent) {
     }
     const eff = getEffStatus(it.id, m.name, it.deadline, it.deadtime);
     const {label, cls} = statusDisplay(eff);
-    const canEdit = isAdmin() || currentUser()===m.name;
+    const canEdit = isAdmin() || (!isSubAdmin() && currentUser()===m.name);
     const click = canEdit
       ? `onclick="openPicker(event,'${it.id}','${m.name}','${it.deadline||''}','${it.deadtime||''}')"` : '';
     html += `<td class="status-cell"><button class="status-btn ${cls}" ${click}>${label}</button></td>`;
@@ -1231,8 +1279,8 @@ function renderItems() {
       <td data-label="截止時間">${it.deadtime||'—'}</td>
       <td data-label="備註" style="max-width:180px;white-space:normal;color:var(--text2)">${it.note||'—'}</td>
       <td data-label="操作">
-        <button class="btn btn-sm btn-default" onclick="openItemModal('${it.id}')">編輯</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteItem('${it.id}')">刪除</button>
+        ${isAdmin() ? `<button class="btn btn-sm btn-default" onclick="openItemModal('${it.id}')">編輯</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteItem('${it.id}')">刪除</button>` : ''}
       </td>
     </tr>`;
   }).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:30px">尚無任務</td></tr>';
@@ -1552,6 +1600,7 @@ function toast(msg, dur=2500) {
 function refreshAll() {
   renderOverview(); renderMatrix();
   if (isAdmin()) { renderItems(); renderSettings(); }
+  else if (isSubAdmin()) { renderItems(); }
 }
 
 loadAll();
