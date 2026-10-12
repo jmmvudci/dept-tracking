@@ -513,7 +513,7 @@ table.delay-table tr:last-child td{border-bottom:none;}
   <div id="picker-date-row" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
     <div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:6px;">📅 管理員：指定實際完成日期</div>
     <input id="picker-date" type="date" onclick="event.stopPropagation()" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;outline:none;margin-bottom:6px;">
-    <div style="font-size:10px;color:var(--text2);margin-bottom:8px;">留空 = 自動記錄今天</div>
+    <div style="font-size:10px;color:var(--text2);margin-bottom:8px;">留空 = 視為準時完成（不計入延遲率）<br>填日期 = 依該日判斷是否晚交</div>
     <button onclick="event.stopPropagation();confirmDone()" style="width:100%;padding:6px;background:var(--green);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">✓ 確認完成</button>
   </div>
 </div>
@@ -857,8 +857,11 @@ async function pushStatus(itemId, memberName, val, adminDate) {
   if (val === 'done') {
     // 管理員有指定日期就用指定的，否則用現在時間
     old.completedAt = adminDate || now;
+    // 管理員標記完成且未填日期 → 視為準時，不計入延遲率
+    old.byAdmin = isAdmin() && !adminDate;
   } else {
     old.completedAt = null;
+    old.byAdmin = false;
   }
   old.status = val;
   G.statusMap[key] = old;
@@ -887,6 +890,7 @@ function getEffStatus(itemId, memberName, deadline, deadtime) {
   const nowDT  = nowStr();
 
   if (s === '0' && nowDT > deadDT) return 'overdue';
+  if (s === 'done' && e.byAdmin) return 'done';  // 管理員未填日期標記完成：一律準時
   if (s === 'done' && e.completedAt && e.completedAt > deadDT) return 'late';
   return s;
 }
@@ -1262,7 +1266,7 @@ async function confirmDone() {
   const adminDate = d ? d + 'T17:00' : null;
   await pushStatus(_pickerCtx.itemId, _pickerCtx.memberName, 'done', adminDate);
   renderMatrix(); renderOverview();
-  toast(d ? `完成日期設為 ${d}` : '狀態已更新（今天）');
+  toast(d ? `完成日期設為 ${d}` : '已標記完成（視為準時）');
 }
 
 document.addEventListener('click', (e) => {
