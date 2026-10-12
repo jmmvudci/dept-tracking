@@ -645,6 +645,20 @@ const BUILTIN_HOLIDAYS = [
   { date:'2027-12-24', note:'行憲紀念日補假' },
 ];
 
+function normalizeData() {
+  G.items.forEach(it => {
+    if (it.deadline) it.deadline = normDate(it.deadline);
+    it.deadtime = normTime(it.deadtime);
+  });
+  G.holidays = G.holidays
+    .map(h => typeof h==='object' ? { date: normDate(h.date), note: h.note||'' } : { date: normDate(h), note:'' })
+    .filter(h => /^\d{4}-\d{2}-\d{2}$/.test(h.date));
+}
+
+function isBuiltinHoliday(date) {
+  return BUILTIN_HOLIDAYS.some(b => b.date === date);
+}
+
 function mergeBuiltinHolidays() {
   const existingDates = new Set(G.holidays.map(h => typeof h==='object' ? h.date : h));
   BUILTIN_HOLIDAYS.forEach(h => {
@@ -672,15 +686,30 @@ function addWorkdays(fromDate, days) {
   return dateStr(d);
 }
 
+// 一律用本地時間（台北），不用 toISOString()（那是 UTC，會差 8 小時）
+function pad2(n) { return ('0'+n).slice(-2); }
 function dateStr(d) {
-  return d.toISOString().slice(0,10);
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
 }
 
 function todayStr() { return dateStr(new Date()); }
 
 function nowStr() {
   const n = new Date();
-  return n.toISOString().slice(0,16); // yyyy-MM-ddTHH:mm
+  return `${dateStr(n)}T${pad2(n.getHours())}:${pad2(n.getMinutes())}`; // yyyy-MM-ddTHH:mm
+}
+
+// 前端防護：時間/日期欄正規化（舊資料可能是 "Sat Dec 30 1899 17:00:00 GMT+0800"）
+function normTime(v) {
+  const m = String(v||'').match(/(\d{1,2}):(\d{2})/);
+  return m ? `${pad2(m[1])}:${m[2]}` : '17:00';
+}
+function normDate(v) {
+  const s = String(v||'');
+  const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return `${m[1]}-${pad2(m[2])}-${pad2(m[3])}`;
+  const d = new Date(s);
+  return isNaN(d) ? s : dateStr(d);
 }
 
 // ══════════════════════════════════════════════
@@ -708,11 +737,11 @@ function session(k, v) {
   else sessionStorage.setItem(k, v);
 }
 function isAdmin()    { return !!session('wt_admin'); }
-function isSubAdmin() { return !!session('wt_subadmin'); }
+function isTaskOnly() { return !!session('wt_taskonly'); }
 function currentUser(){ return session('wt_user') || null; }
 
-// 副管理員固定帳號（帳號=密碼）
-const SUBADMIN_ACCOUNTS = ['980857','A80668','B31061','B40465','B50385'];
+// 新增任務專用帳號（帳號=密碼）：只能新增任務，無其他功能
+const TASK_ONLY_ACCOUNTS = ['980857','A80668','B31061','B40465','B50385'];
 
 function doLogin() {
   const u = document.getElementById('login-user').value.trim();
@@ -724,10 +753,10 @@ function doLogin() {
     closeLoginModal(); applyAuth(); toast('已以管理員身分登入'); refreshAll();
     return;
   }
-  // 副管理員驗證（帳號=密碼）
-  if (SUBADMIN_ACCOUNTS.includes(u) && p === u) {
-    session('wt_subadmin','1'); session('wt_user', `副管理員(${u})`);
-    closeLoginModal(); applyAuth(); toast('已以副管理員身分登入'); refreshAll();
+  // 新增任務專用帳號（帳號=密碼）
+  if (TASK_ONLY_ACCOUNTS.includes(u) && p === u) {
+    session('wt_taskonly','1'); session('wt_user', u);
+    closeLoginModal(); applyAuth(); toast(`已登入：${u}`); refreshAll();
     return;
   }
   const m = G.members.find(x => x.empId === u && x.pwd === p);
@@ -740,7 +769,7 @@ function doLogin() {
 }
 
 function doLogout() {
-  ['wt_admin','wt_subadmin','wt_user'].forEach(k => session(k, null));
+  ['wt_admin','wt_taskonly','wt_subadmin','wt_user'].forEach(k => session(k, null));
   applyAuth(); toast('已登出'); refreshAll();
 }
 
@@ -749,8 +778,8 @@ function applyAuth() {
   document.getElementById('user-label').textContent = user ? `👤 ${user}` : '';
   document.getElementById('login-btn').style.display  = user ? 'none' : '';
   document.getElementById('logout-btn').style.display = user ? '' : 'none';
-  // 任務管理：管理員 + 副管理員可見
-  document.getElementById('tab-items').classList.toggle('hidden', !isAdmin() && !isSubAdmin());
+  // 任務管理：管理員 + 新增任務專用帳號可見
+  document.getElementById('tab-items').classList.toggle('hidden', !isAdmin() && !isTaskOnly());
   // 設定頁：僅管理員可見
   document.getElementById('tab-settings').classList.toggle('hidden', !isAdmin());
   // 延遲率：僅管理員可見
@@ -782,12 +811,14 @@ async function loadAll() {
     G.year      = d.year || G.year;
     G.statusMap = {};
     (d.statuses||[]).forEach(r => { G.statusMap[r.key] = safeParseEntry(r.value); });
+    normalizeData();
     mergeBuiltinHolidays();
     document.getElementById('year-badge').textContent = G.year;
     document.getElementById('cfg-year').value = G.year;
     document.getElementById('admin-user').value = G.cfg.adminUser || '';
   } catch(e) {
     loadLocal();
+    normalizeData();
     mergeBuiltinHolidays();
   }
   showLoading(false);
@@ -853,7 +884,7 @@ function getEffStatus(itemId, memberName, deadline, deadtime) {
 
   // Build deadline datetime string for comparison
   const deadDT = deadtime ? `${deadline}T${deadtime}` : `${deadline}T23:59`;
-  const nowDT  = new Date().toISOString().slice(0,16);
+  const nowDT  = nowStr();
 
   if (s === '0' && nowDT > deadDT) return 'overdue';
   if (s === 'done' && e.completedAt && e.completedAt > deadDT) return 'late';
@@ -910,8 +941,8 @@ function renderOverview() {
   }));
 
   document.getElementById('overview-stats').innerHTML = `
-    <div class="stat-card"><div class="label">任務總數</div><div class="value">${G.items.length}</div></div>
-    <div class="stat-card"><div class="label">成員人數</div><div class="value">${G.members.length}</div></div>
+    <div class="stat-card"><div class="label">任務總數</div><div class="value">${visibleItems().length}</div></div>
+    <div class="stat-card"><div class="label">成員人數</div><div class="value">${visibleMembers().length}</div></div>
     <div class="stat-card"><div class="label" style="color:var(--green)">已完成</div><div class="value" style="color:var(--green)">${done}</div></div>
     <div class="stat-card"><div class="label" style="color:var(--red)">逾期未完成</div><div class="value" style="color:var(--red)">${overdue}</div></div>
   `;
@@ -1016,7 +1047,8 @@ function renderMatrix() {
   let members = fp
     ? visibleMembers().filter(m=>m.name===fp)
     : visibleMembers();
-  let items   = ft ? G.items.filter(it=>it.type===ft)  : G.items;
+  let items   = visibleItems();
+  if (ft) items = items.filter(it=>it.type===ft);
   if (fp) items = items.filter(it=>it.members.includes(fp));
 
   if (!items.length || !members.length) {
@@ -1111,7 +1143,7 @@ function renderItemRow(it, members, indent) {
     }
     const eff = getEffStatus(it.id, m.name, it.deadline, it.deadtime);
     const {label, cls} = statusDisplay(eff);
-    const canEdit = isAdmin() || (!isSubAdmin() && currentUser()===m.name);
+    const canEdit = isAdmin() || (!isTaskOnly() && currentUser()===m.name);
     const click = canEdit
       ? `onclick="openPicker(event,'${it.id}','${m.name}','${it.deadline||''}','${it.deadtime||''}')"` : '';
     html += `<td class="status-cell"><button class="status-btn ${cls}" ${click}>${label}</button></td>`;
@@ -1174,13 +1206,14 @@ function openPicker(e, itemId, memberName, deadline, deadtime) {
     const spaceBelow = window.innerHeight - rect.bottom;
     const spaceAbove = rect.top;
 
+    // picker 是 position:fixed，座標以視窗為準，不可加 scrollY
     let top;
     if (spaceBelow >= pkH + 8) {
-      top = rect.bottom + window.scrollY + 4;
+      top = rect.bottom + 4;
     } else if (spaceAbove >= pkH + 8) {
-      top = rect.top + window.scrollY - pkH - 4;
+      top = rect.top - pkH - 4;
     } else {
-      top = window.scrollY + window.innerHeight - pkH - 16;
+      top = Math.max(8, window.innerHeight - pkH - 16);
     }
     const left = Math.min(Math.max(rect.left, 8), window.innerWidth - pkW - 8);
     pk.style.left = left + 'px';
@@ -1203,10 +1236,10 @@ async function selectStatus(val) {
       const curTop  = parseFloat(pk.style.top)  || 0;
       const curLeft = parseFloat(pk.style.left) || 0;
 
-      // 如果展開後超出視窗底部，往上移
-      const bottomEdge = curTop - window.scrollY + pkH;
+      // 如果展開後超出視窗底部，往上移（fixed 座標）
+      const bottomEdge = curTop + pkH;
       if (bottomEdge > window.innerHeight - 16) {
-        pk.style.top = Math.max(window.scrollY + 8, curTop - (bottomEdge - window.innerHeight + 16)) + 'px';
+        pk.style.top = Math.max(8, window.innerHeight - pkH - 16) + 'px';
       }
       // 確保不超出右側
       if (curLeft + pkW > window.innerWidth - 8) {
@@ -1238,6 +1271,14 @@ document.addEventListener('click', (e) => {
     pk.style.display = 'none';
   }
 });
+// 頁面或矩陣捲動時關閉 picker，避免選單和格子脫離
+document.addEventListener('scroll', (e) => {
+  const pk = document.getElementById('status-picker');
+  if (pk.style.display === 'none' || pk.contains(e.target)) return;
+  // 管理員正在輸入完成日期時不關閉（手機鍵盤彈出會觸發捲動）
+  if (document.activeElement === document.getElementById('picker-date')) return;
+  pk.style.display = 'none';
+}, true);
 
 // ══════════════════════════════════════════════
 //  AUTO DEADLINE (type change)
@@ -1265,7 +1306,7 @@ let _editingItemId = null;
 function renderItems() {
   const fp = document.getElementById('it-person-filter').value;
   const ft = document.getElementById('it-type-filter').value;
-  let items = G.items;
+  let items = visibleItems();
   if (fp) items = items.filter(it=>it.members.includes(fp));
   if (ft) items = items.filter(it=>it.type===ft);
 
@@ -1289,7 +1330,8 @@ function renderItems() {
 function openItemModal(id) {
   _editingItemId = id || null;
   document.getElementById('modal-title').textContent = id ? '編輯任務' : '新增任務';
-  document.getElementById('f-members').innerHTML = G.members.map(m =>
+  if (id && !isAdmin()) { toast('僅管理員可編輯任務'); return; }
+  document.getElementById('f-members').innerHTML = visibleMembers().map(m =>
     `<label><input type="checkbox" value="${m.name}"> ${m.name}</label>`).join('');
   document.getElementById('deadline-hint').textContent = '';
 
@@ -1345,6 +1387,7 @@ async function saveItem() {
 }
 
 async function deleteItem(id) {
+  if (!isAdmin()) return;
   if (!confirm('確定要刪除這項任務？')) return;
   G.items = G.items.filter(x=>x.id!==id);
   saveLocal();
@@ -1379,7 +1422,7 @@ function openMeetingModal() {
   document.getElementById('mtg-name').value = '';
   document.getElementById('mtg-date').value = '';
   document.getElementById('mtg-preview').innerHTML = '選擇會議日期後自動顯示截止日';
-  document.getElementById('mtg-members').innerHTML = G.members.map(m =>
+  document.getElementById('mtg-members').innerHTML = visibleMembers().map(m =>
     `<label><input type="checkbox" value="${m.name}"> ${m.name}</label>`).join('');
   document.getElementById('meeting-modal-overlay').style.display = 'flex';
 }
@@ -1455,13 +1498,15 @@ function renderSettings() {
     </div>`;
 
   // Holidays
+  // 依日期排序顯示；內建假日不可刪（刪了重新載入也會再出現）
   document.getElementById('holiday-list').innerHTML =
-    G.holidays.map((h,i) => {
-      const note = typeof h==='object' ? `${h.date} ${h.note||''}` : h;
-      const date = typeof h==='object' ? h.date : h;
-      return `<div class="holiday-tag">${note}
-        <button onclick="removeHoliday(${i})" title="移除">×</button>
-      </div>`;
+    [...G.holidays].sort((a,b) => a.date.localeCompare(b.date)).map(h => {
+      const label = `${h.date} ${h.note||''}`;
+      return isBuiltinHoliday(h.date)
+        ? `<div class="holiday-tag" title="系統內建假日">${label} 🔒</div>`
+        : `<div class="holiday-tag">${label}
+            <button onclick="removeHoliday('${h.date}')" title="移除">×</button>
+          </div>`;
     }).join('') || '<span style="font-size:12px;color:var(--text2)">尚無假日</span>';
 }
 
@@ -1511,6 +1556,13 @@ function visibleMembers() {
   return G.members.filter(m => !m.hidden);
 }
 
+// 只保留至少有一位可見負責人的任務（避免露出只派給隱藏人員的任務）
+function visibleItems() {
+  if (isAdmin()) return G.items;
+  const names = new Set(visibleMembers().map(m => m.name));
+  return G.items.filter(it => it.members.some(n => names.has(n)));
+}
+
 function removeMember(i) {
   if (!confirm(`確定移除 ${G.members[i].name}？`)) return;
   G.members.splice(i,1);
@@ -1531,8 +1583,9 @@ function addHoliday() {
   renderSettings(); saveSettings();
 }
 
-function removeHoliday(i) {
-  G.holidays.splice(i,1);
+function removeHoliday(date) {
+  if (isBuiltinHoliday(date)) return;
+  G.holidays = G.holidays.filter(h => h.date !== date);
   renderSettings(); saveSettings();
 }
 
@@ -1598,9 +1651,16 @@ function toast(msg, dur=2500) {
   clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('show'), dur);
 }
 function refreshAll() {
+  // 登入身分改變時，可見成員也會變，篩選選單要跟著更新
+  populateFilters();
+  // 目前停在沒有權限的頁籤時，切回總覽
+  const active = document.querySelector('.tab-btn.active');
+  if (active && active.classList.contains('hidden')) {
+    switchTab(document.querySelector('.tab-btn[data-panel="panel-overview"]'));
+  }
   renderOverview(); renderMatrix();
   if (isAdmin()) { renderItems(); renderSettings(); }
-  else if (isSubAdmin()) { renderItems(); }
+  else if (isTaskOnly()) { renderItems(); }
 }
 
 loadAll();
