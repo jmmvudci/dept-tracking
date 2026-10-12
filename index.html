@@ -511,9 +511,9 @@ table.delay-table tr:last-child td{border-bottom:none;}
   <div class="picker-title" id="picker-title"></div>
   <div id="picker-opts"></div>
   <div id="picker-date-row" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
-    <div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:6px;">📅 管理員：指定實際完成日期</div>
+    <div id="picker-date-label" style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:6px;">📅 管理員：指定實際完成日期</div>
     <input id="picker-date" type="date" onclick="event.stopPropagation()" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;outline:none;margin-bottom:6px;">
-    <div style="font-size:10px;color:var(--text2);margin-bottom:8px;">留空 = 視為準時完成（不計入延遲率）<br>填日期 = 依該日判斷是否晚交</div>
+    <div id="picker-date-hint" style="font-size:10px;color:var(--text2);margin-bottom:8px;">留空 = 視為準時完成（不計入延遲率）<br>填日期 = 依該日判斷是否晚交</div>
     <button onclick="event.stopPropagation();confirmDone()" style="width:100%;padding:6px;background:var(--green);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">✓ 確認完成</button>
   </div>
 </div>
@@ -738,6 +738,8 @@ function session(k, v) {
 }
 function isAdmin()    { return !!session('wt_admin'); }
 function isTaskOnly() { return !!session('wt_taskonly'); }
+// 可選全部狀態、可指定完成日期：管理員 + 5 組專用帳號
+function canFullStatus() { return isAdmin() || isTaskOnly(); }
 function currentUser(){ return session('wt_user') || null; }
 
 // 新增任務專用帳號（帳號=密碼）：只能新增任務，無其他功能
@@ -1147,7 +1149,8 @@ function renderItemRow(it, members, indent) {
     }
     const eff = getEffStatus(it.id, m.name, it.deadline, it.deadtime);
     const {label, cls} = statusDisplay(eff);
-    const canEdit = isAdmin() || (!isTaskOnly() && currentUser()===m.name);
+    // 管理員、5 組專用帳號：所有格子都能改；一般成員：只能改自己
+    const canEdit = isAdmin() || isTaskOnly() || currentUser()===m.name;
     const click = canEdit
       ? `onclick="openPicker(event,'${it.id}','${m.name}','${it.deadline||''}','${it.deadtime||''}')"` : '';
     html += `<td class="status-cell"><button class="status-btn ${cls}" ${click}>${label}</button></td>`;
@@ -1182,7 +1185,14 @@ function openPicker(e, itemId, memberName, deadline, deadtime) {
     {val:'na',   label:'N/A',   color:'#6b7280'},
   ];
   // 一般成員只能選「待辦」和「已完成」
-  const opts = isAdmin() ? allOpts : allOpts.filter(o => o.val === '0' || o.val === 'done');
+  // 管理員與 5 組專用帳號可選全部狀態
+  const opts = canFullStatus() ? allOpts : allOpts.filter(o => o.val === '0' || o.val === 'done');
+  // 日期欄說明依身分顯示
+  document.getElementById('picker-date-label').textContent =
+    isAdmin() ? '📅 管理員：指定實際完成日期' : '📅 指定實際完成日期';
+  document.getElementById('picker-date-hint').innerHTML = isAdmin()
+    ? '留空 = 視為準時完成（不計入延遲率）<br>填日期 = 依該日判斷是否晚交'
+    : '留空 = 以現在時間記錄<br>填日期 = 依該日判斷是否晚交';
   document.getElementById('picker-title').textContent = memberName;
   document.getElementById('picker-opts').innerHTML = opts.map(o =>
     `<div class="picker-opt" onclick="selectStatus('${o.val}')">
@@ -1227,7 +1237,7 @@ function openPicker(e, itemId, memberName, deadline, deadtime) {
 
 async function selectStatus(val) {
   // 管理員點「已完成」→ 不立即關閉，顯示日期確認欄並重新定位
-  if (isAdmin() && val === 'done') {
+  if (canFullStatus() && val === 'done') {
     const pk = document.getElementById('status-picker');
     document.getElementById('picker-date-row').style.display = 'block';
     document.getElementById('picker-date').value = '';
@@ -1266,7 +1276,7 @@ async function confirmDone() {
   const adminDate = d ? d + 'T17:00' : null;
   await pushStatus(_pickerCtx.itemId, _pickerCtx.memberName, 'done', adminDate);
   renderMatrix(); renderOverview();
-  toast(d ? `完成日期設為 ${d}` : '已標記完成（視為準時）');
+  toast(d ? `完成日期設為 ${d}` : (isAdmin() ? '已標記完成（視為準時）' : '已標記完成'));
 }
 
 document.addEventListener('click', (e) => {
