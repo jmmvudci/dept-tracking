@@ -55,6 +55,33 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:var(-
 .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);}
 .stat-card .label{font-size:12px;color:var(--text2);margin-bottom:6px;}
 .stat-card .value{font-size:24px;font-weight:700;}
+.stat-card .value small{font-size:13px;font-weight:500;color:var(--text2);margin-left:2px;}
+.stat-card .sub{font-size:11px;color:var(--text2);margin-top:4px;}
+.stat-card.clickable{cursor:pointer;transition:border-color .15s,box-shadow .15s;}
+.stat-card.clickable:hover,.stat-card.clickable.open{border-color:var(--red);box-shadow:var(--shadow-md);}
+.stat-card.clickable:focus-visible{outline:2px solid var(--red);outline-offset:2px;}
+
+/* 逾期清單 / 本週下週到期 */
+.ov-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:20px;overflow:hidden;}
+.ov-panel-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.ov-panel-head h4{font-size:14px;font-weight:700;flex:1;min-width:140px;}
+.ov-row{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;flex-wrap:wrap;}
+.ov-row:last-child{border-bottom:none;}
+.ov-row:hover{background:var(--surface2);}
+.ov-row.all-done{opacity:.5;}
+.ov-row .ov-date{min-width:118px;font-size:12px;color:var(--text2);white-space:nowrap;}
+.ov-row .ov-date.today{color:var(--accent);font-weight:700;}
+.ov-row .ov-task{flex:1;min-width:180px;font-size:13px;font-weight:600;line-height:1.4;}
+.ov-row .ov-who{display:flex;flex-wrap:wrap;gap:4px;}
+.who-chip{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;white-space:nowrap;}
+.ov-late-days{font-size:12px;font-weight:700;color:var(--red);white-space:nowrap;min-width:64px;text-align:right;}
+.due-tabs{display:flex;gap:4px;}
+.due-tab{padding:5px 12px;border:1px solid var(--border);border-radius:16px;background:var(--surface);font-size:12px;font-family:inherit;cursor:pointer;color:var(--text2);}
+.due-tab.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
+.ov-empty{padding:20px 16px;font-size:13px;color:var(--text2);text-align:center;}
+tr.flash td{animation:flash 1.6s ease-out;}
+@keyframes flash{0%,40%{background:#fef9c3;}100%{background:transparent;}}
+@media(prefers-reduced-motion:reduce){tr.flash td{animation:none;background:#fef9c3;}}
 
 /* Person cards */
 #person-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
@@ -344,6 +371,8 @@ table.delay-table tr:last-child td{border-bottom:none;}
     <div id="overview-top">
       <div id="overview-top-left">
         <div id="overview-stats"></div>
+        <div id="overdue-panel" style="display:none"></div>
+        <div id="due-section"></div>
         <div class="section-title">成員工作進度 <span class="badge" id="ov-member-count"></span></div>
         <div id="person-cards"></div>
       </div>
@@ -968,20 +997,29 @@ function renderOverview() {
     ? visibleMembers().filter(m => m.name === fp)
     : visibleMembers();
 
-  let done=0, overdue=0;
+  // 統計口徑：任務總數 = 任務筆數；已完成 / 逾期 = 人次（一筆任務 3 位負責人算 3 人次）
+  let done=0, overdue=0, pairs=0;
   visibleMembers().forEach(m => G.items.forEach(it => {
     if (!it.members.includes(m.name)) return;
+    pairs++;
     const e = getEffStatus(it.id, m.name, it.deadline, it.deadtime);
     if (e==='done'||e==='late') done++;
     if (e==='overdue') overdue++;
   }));
 
   document.getElementById('overview-stats').innerHTML = `
-    <div class="stat-card"><div class="label">任務總數</div><div class="value">${visibleItems().length}</div></div>
-    <div class="stat-card"><div class="label">成員人數</div><div class="value">${visibleMembers().length}</div></div>
-    <div class="stat-card"><div class="label" style="color:var(--green)">已完成</div><div class="value" style="color:var(--green)">${done}</div></div>
-    <div class="stat-card"><div class="label" style="color:var(--red)">逾期未完成</div><div class="value" style="color:var(--red)">${overdue}</div></div>
+    <div class="stat-card"><div class="label">任務總數</div><div class="value">${visibleItems().length}<small>項</small></div><div class="sub">共 ${pairs} 人次</div></div>
+    <div class="stat-card"><div class="label">成員人數</div><div class="value">${visibleMembers().length}<small>人</small></div></div>
+    <div class="stat-card"><div class="label" style="color:var(--green)">已完成</div><div class="value" style="color:var(--green)">${done}<small>人次</small></div></div>
+    <div class="stat-card clickable ${_overdueOpen?'open':''}" role="button" tabindex="0"
+         onclick="toggleOverdue()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleOverdue();}">
+      <div class="label" style="color:var(--red)">逾期未完成</div>
+      <div class="value" style="color:var(--red)">${overdue}<small>人次</small></div>
+      <div class="sub">${overdue ? (_overdueOpen ? '收合名單 ▴' : '點選查看名單 ▾') : '目前沒有逾期'}</div>
+    </div>
   `;
+  renderOverduePanel();
+  renderDueSection(fp);
 
   document.getElementById('ov-member-count').textContent = `${members.length} 人`;
   document.getElementById('person-cards').innerHTML = members.map(m => {
@@ -1067,6 +1105,129 @@ function renderDelayTable() {
   document.getElementById('delay-table').innerHTML =
     `<thead><tr><th>姓名</th><th>任務類型</th><th>延遲筆數／項目</th><th>有截止日任務</th><th>延遲率</th></tr></thead>
      <tbody>${isEmpty ? '<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:20px">無符合條件的資料</td></tr>' : rows}</tbody>`;
+}
+
+// ══════════════════════════════════════════════
+//  逾期清單 / 本週下週到期
+// ══════════════════════════════════════════════
+let _overdueOpen = false;
+let _dueTab = 'this';
+let _dueHideDone = false;
+
+const WEEKDAY = ['日','一','二','三','四','五','六'];
+function fmtDue(it) {
+  const d = parseLocalDate(it.deadline);
+  return `${d.getMonth()+1}/${d.getDate()}（${WEEKDAY[d.getDay()]}）${it.deadtime||''}`;
+}
+function typeTag(type) {
+  const m = TYPE_META[type] || {};
+  return `<span class="task-type-tag ${m.tag||''}">${m.label||type}</span>`;
+}
+function whoChip(it, name) {
+  const eff = getEffStatus(it.id, name, it.deadline, it.deadtime);
+  const { label, cls } = statusDisplay(eff);
+  return `<span class="who-chip ${cls}">${name}・${label}</span>`;
+}
+// 週一 ~ 週日
+function weekRange(offset) {
+  const d = new Date(); d.setHours(0,0,0,0);
+  const dow = (d.getDay() + 6) % 7;            // 週一 = 0
+  d.setDate(d.getDate() - dow + offset * 7);
+  const start = dateStr(d);
+  d.setDate(d.getDate() + 6);
+  return { start, end: dateStr(d) };
+}
+
+function toggleOverdue() {
+  _overdueOpen = !_overdueOpen;
+  renderOverview();
+  if (_overdueOpen) document.getElementById('overdue-panel').scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+function renderOverduePanel() {
+  const el = document.getElementById('overdue-panel');
+  if (!_overdueOpen) { el.style.display = 'none'; return; }
+  const names = new Set(visibleMembers().map(m => m.name));
+  const now = new Date();
+  const rows = [];
+  G.items.forEach(it => it.members.forEach(n => {
+    if (!names.has(n)) return;
+    if (getEffStatus(it.id, n, it.deadline, it.deadtime) !== 'overdue') return;
+    const dead = new Date(`${it.deadline}T${it.deadtime||'23:59'}`);
+    rows.push({ it, n, days: Math.max(1, Math.ceil((now - dead) / 86400000)) });
+  }));
+  rows.sort((a,b) => b.days - a.days || a.n.localeCompare(b.n));
+
+  el.style.display = '';
+  el.innerHTML = `<div class="ov-panel" style="border-color:#fecaca;">
+    <div class="ov-panel-head" style="background:var(--red-light);">
+      <h4 style="color:var(--red)">⏰ 逾期未完成名單（${rows.length} 人次）</h4>
+      <span style="font-size:11px;color:var(--text2)">點選任一筆可跳到追蹤矩陣</span>
+      <button class="btn btn-sm btn-default" onclick="toggleOverdue()">收合</button>
+    </div>
+    ${rows.length ? rows.map(r => `
+      <div class="ov-row" onclick="gotoMatrix('${r.n}','${r.it.id}')">
+        <span class="ov-date">${fmtDue(r.it)}</span>
+        <span class="ov-task">${r.it.name}<br>${typeTag(r.it.type)}</span>
+        <span class="who-chip soverdue">👤 ${r.n}</span>
+        <span class="ov-late-days">逾期 ${r.days} 天</span>
+      </div>`).join('') : '<div class="ov-empty">目前沒有逾期未完成的任務</div>'}
+  </div>`;
+}
+
+function renderDueSection(fp) {
+  const names = new Set(visibleMembers().map(m => m.name));
+  const today = todayStr();
+  const pick = offset => {
+    const { start, end } = weekRange(offset);
+    let list = visibleItems().filter(it => it.deadline && it.deadline >= start && it.deadline <= end);
+    if (fp) list = list.filter(it => it.members.includes(fp));
+    list.sort((a,b) => (a.deadline + (a.deadtime||'')).localeCompare(b.deadline + (b.deadtime||'')));
+    return { start, end, list };
+  };
+  const wk = { this: pick(0), next: pick(1) };
+  const cur = wk[_dueTab];
+  const isAllDone = it => it.members.filter(n => names.has(n)).every(n => {
+    const e = getEffStatus(it.id, n, it.deadline, it.deadtime);
+    return e === 'done' || e === 'late' || e === 'na';
+  });
+  const shown = _dueHideDone ? cur.list.filter(it => !isAllDone(it)) : cur.list;
+  const md = s => { const d = parseLocalDate(s); return `${d.getMonth()+1}/${d.getDate()}`; };
+
+  document.getElementById('due-section').innerHTML = `<div class="ov-panel">
+    <div class="ov-panel-head">
+      <h4>📅 到期任務 <span style="font-size:12px;font-weight:400;color:var(--text2)">${md(cur.start)}–${md(cur.end)}${fp ? `・${fp}` : ''}</span></h4>
+      <div class="due-tabs">
+        <button class="due-tab ${_dueTab==='this'?'active':''}" onclick="_dueTab='this';renderDueSection(document.getElementById('ov-person-filter').value)">本週 ${wk.this.list.length}</button>
+        <button class="due-tab ${_dueTab==='next'?'active':''}" onclick="_dueTab='next';renderDueSection(document.getElementById('ov-person-filter').value)">下週 ${wk.next.list.length}</button>
+      </div>
+      <label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:4px;cursor:pointer;">
+        <input type="checkbox" ${_dueHideDone?'checked':''} onchange="_dueHideDone=this.checked;renderDueSection(document.getElementById('ov-person-filter').value)"> 隱藏已完成
+      </label>
+    </div>
+    ${shown.length ? shown.map(it => `
+      <div class="ov-row ${isAllDone(it)?'all-done':''}" onclick="gotoMatrix('${fp||''}','${it.id}')">
+        <span class="ov-date ${it.deadline===today?'today':''}">${it.deadline===today?'今天 ':''}${fmtDue(it)}</span>
+        <span class="ov-task">${it.name}<br>${typeTag(it.type)}</span>
+        <span class="ov-who">${it.members.filter(n => names.has(n)).map(n => whoChip(it, n)).join('')}</span>
+      </div>`).join('')
+      : `<div class="ov-empty">${cur.list.length ? '這週的任務都已完成' : (_dueTab==='this' ? '本週沒有到期任務' : '下週沒有到期任務')}</div>`}
+  </div>`;
+}
+
+// 跳到追蹤矩陣：篩選負責人並捲動到該任務
+function gotoMatrix(name, itemId) {
+  document.getElementById('mx-person-filter').value = name || '';
+  document.getElementById('mx-type-filter').value = '';
+  switchTab(document.querySelector('.tab-btn[data-panel="panel-matrix"]'));
+  if (!itemId) return;
+  requestAnimationFrame(() => {
+    const tr = document.querySelector(`#matrix-container tr[data-item="${itemId}"]`);
+    if (!tr) return;
+    tr.scrollIntoView({ behavior:'smooth', block:'center' });
+    tr.classList.add('flash');
+    setTimeout(() => tr.classList.remove('flash'), 1700);
+  });
 }
 
 function filterByPerson(name) {
@@ -1169,7 +1330,7 @@ function renderItemRow(it, members, indent) {
   const deadlineDisplay = it.deadline
     ? (it.deadtime ? `${it.deadline} ${it.deadtime}` : it.deadline)
     : '無截止日';
-  let html = `<tr><td class="task-info" style="${indent?'padding-left:24px!important':''}">
+  let html = `<tr data-item="${it.id}"><td class="task-info" style="${indent?'padding-left:24px!important':''}">
     <div class="task-name">${it.name}</div>
     <div class="task-meta">📅 ${deadlineDisplay}${it.note?` ｜ ${it.note}`:''}</div>
   </td>`;
