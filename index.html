@@ -2177,7 +2177,12 @@ const ROT_LEVELS = [
   { v:0, label:'未接觸' }, { v:1, label:'訓練中' }, { v:2, label:'可獨立執行' },
   { v:3, label:'可代理' }, { v:4, label:'可教導他人' }
 ];
-const ROT_GROUPS = ['醫事人員培訓','醫師與學生訓練','師資培育','醫學研究','行政與資訊'];
+const ROT_GROUP_ORDER = ['醫學教育委員會','醫師人員訓練','醫事人員訓練','師資培育','醫學研究','行政與資訊'];
+// 依固定順序排；Sheet 裡若出現新的群組名稱，自動接在後面
+function rotGroups() {
+  const extra = Array.from(new Set(R.items.map(it => it.group))).filter(g => g && !ROT_GROUP_ORDER.includes(g));
+  return ROT_GROUP_ORDER.filter(g => R.items.some(it => it.group === g)).concat(extra);
+}
 const ROT_PCOLORS = [
   ['#dbeafe','#1d4ed8'], ['#dcfce7','#166534'], ['#fce7f3','#9d174d'],
   ['#fef3c7','#92400e'], ['#ede9fe','#5b21b6'], ['#e0f2fe','#0369a1']
@@ -2281,7 +2286,7 @@ function rotFillFilters() {
   per.innerHTML = R.periods.slice().reverse().map(p =>
     `<option value="${esc(p)}"${p === R.period ? ' selected' : ''}>${esc(p)}${p === R.cur ? '（目前）' : ''}</option>`).join('');
   const grp = document.getElementById('rot-group');
-  grp.innerHTML = `<option value="">全部群組</option>` + ROT_GROUPS.map(g =>
+  grp.innerHTML = `<option value="">全部群組</option>` + rotGroups().map(g =>
     `<option${g === R.group ? ' selected' : ''}>${g}</option>`).join('');
   const isAdm = R.role === 'admin';
   const ps = document.getElementById('rot-person');
@@ -2370,7 +2375,7 @@ function rotAdminOverviewHtml() {
   const avg = stats.length ? stats.reduce((a, x) => a + x.s.done / x.s.total, 0) / stats.length : 0;
   return `
   <div class="rot-stats">
-    <div class="stat-card"><div class="label">業務大項</div><div class="value">${n}<small>項</small></div><div class="sub">${ROT_GROUPS.length} 個群組</div></div>
+    <div class="stat-card"><div class="label">業務大項</div><div class="value">${n}<small>項</small></div><div class="sub">${rotGroups().length} 個群組</div></div>
     <div class="stat-card"><div class="label">${esc(R.period)} 已評分</div><div class="value">${scoredThis}<small>/ ${n * P}</small></div><div class="sub">${P} 位同仁 × ${n} 項</div></div>
     <div class="stat-card"><div class="label">只有 1 人以下能獨立執行</div><div class="value" style="color:${solo ? 'var(--orange)' : 'inherit'}">${solo}<small>項</small></div><div class="sub">人員異動時的風險業務</div></div>
     <div class="stat-card"><div class="label">平均輪訓完成度</div><div class="value">${Math.round(avg * 100)}<small>%</small></div><div class="sub">評分 ≥${R.pass} 的項目比例</div></div>
@@ -2447,7 +2452,7 @@ function rotProfileHtml(name) {
 function rotMapHtml(focus) {
   const items = rotFilteredItems();
   const isAdm = R.role === 'admin';
-  const groups = ROT_GROUPS.filter(g => !R.group || g === R.group);
+  const groups = rotGroups().filter(g => !R.group || g === R.group);
   const html = groups.map(g => {
     const its = items.filter(it => it.group === g);
     if (!its.length) return '';
@@ -2479,7 +2484,7 @@ function rotMapHtml(focus) {
 function rotMatrixHtml() {
   const items = rotFilteredItems();
   const P = R.people;
-  const groups = ROT_GROUPS.filter(g => !R.group || g === R.group);
+  const groups = rotGroups().filter(g => !R.group || g === R.group);
   let rows = '';
   groups.forEach(g => {
     const its = items.filter(it => it.group === g);
