@@ -1506,8 +1506,9 @@ function openPicker(e, itemId, memberName, deadline, deadtime) {
   document.getElementById('picker-date-label').textContent =
     isAdmin() ? '📅 管理員：指定實際完成日期' : '📅 指定實際完成日期';
   document.getElementById('picker-date-hint').innerHTML = isAdmin()
-    ? '留空 = 視為準時完成（不計入延遲率）<br>填日期 = 依該日判斷是否晚交'
-    : '留空 = 以現在時間記錄<br>填日期 = 依該日判斷是否晚交';
+    ? '留空 = 視為準時完成（不計入延遲率）<br>填日期 = 截止日當天以前算準時，之後算晚交'
+    : '留空 = 以現在時間記錄<br>填日期 = 截止日當天以前算準時，之後算晚交';
+  document.getElementById('picker-date').max = todayStr();   // 不能選未來日期
   document.getElementById('picker-title').textContent = memberName;
   document.getElementById('picker-opts').innerHTML = opts.map(o =>
     `<div class="picker-opt" onclick="selectStatus('${o.val}')">
@@ -1588,7 +1589,8 @@ async function confirmDone() {
   document.getElementById('status-picker').style.display = 'none';
   if (!_pickerCtx) return;
   const d = document.getElementById('picker-date').value;
-  const adminDate = d ? d + 'T17:00' : null;
+  // 只選日期沒有時間：選今天＝按下去的那一刻；選過去某天＝當天開始（截止日當天以前都算準時）
+  const adminDate = !d ? null : (d === todayStr() ? nowStr() : d + 'T00:00');
   await pushStatus(_pickerCtx.itemId, _pickerCtx.memberName, 'done', adminDate);
   renderMatrix(); renderOverview();
   toast(d ? `完成日期設為 ${d}` : (isAdmin() ? '已標記完成（視為準時）' : '已標記完成'));
