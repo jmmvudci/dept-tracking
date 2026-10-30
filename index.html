@@ -350,6 +350,14 @@ table.delay-table tr:last-child td{border-bottom:none;}
 .rot-form{margin-top:10px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:13px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
 .rot-form select,.rot-form input{padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;}
 .rot-form .hint{flex-basis:100%;font-size:11px;color:var(--text2);}
+.rot-lvtbl{width:100%;border-collapse:collapse;font-size:12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.rot-lvtbl td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:middle;cursor:pointer;}
+.rot-lvtbl tr:last-child td{border-bottom:none;}
+.rot-lvtbl tr:hover td{background:var(--surface2);}
+.rot-lvtbl tr.sel td{background:var(--accent-light);}
+.rot-lvtbl tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent);}
+.rot-lvtbl tr.pass td{border-top:2px dashed var(--accent);}
+.rot-lvtbl .lv-now{font-size:10px;font-weight:600;color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:0 5px;margin-left:4px;}
 .rot-note{background:var(--accent-light);color:var(--accent);border-radius:var(--radius);padding:10px 14px;font-size:13px;margin-bottom:16px;}
 .rot-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
 .rot-people{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-bottom:24px;}
@@ -2630,12 +2638,21 @@ function rotOpen(gid) {
   if (isAdm) {
     const f = R.form;
     if (f && f.type === 'score') {
-      html += `<div class="rot-form">為 <b>${esc(f.from)}</b> 新增評分（${rocDate(R.today)}）
-        <select id="rot-f-score" onchange="document.getElementById('rot-f-desc').textContent = this.value ? ROT_LEVELS[this.value].desc : ''"><option value="">選擇分數</option>${ROT_LV.map(lv => `<option value="${lv.v}">${lv.v} ${lv.label}</option>`).join('')}</select>
-        <input id="rot-f-note" placeholder="備註（選填）" style="width:200px">
-        <button class="btn btn-sm btn-primary" onclick="rotSubmitScore()">確定</button>
-        <button class="btn btn-sm btn-default" onclick="rotForm(null)">取消</button>
-        <div class="hint"><span id="rot-f-desc" style="color:var(--accent)"></span>　同一天再評一次會取代當天那筆</div></div>`;
+      const now = rotLatest(gid, f.from);
+      html += `<div class="rot-form" style="display:block">
+        <div style="margin-bottom:8px">為 <b>${esc(f.from)}</b> 新增評分（${rocDate(R.today)}）${now ? `<span style="color:var(--text2);font-size:12px">　目前 ${now.score} 分（${rocDate(now.date)}）</span>` : ''}</div>
+        <input type="hidden" id="rot-f-score" value="">
+        <table class="rot-lvtbl"><tbody>${ROT_LV.map(lv => `<tr data-v="${lv.v}" onclick="rotPickLv(${lv.v})" class="${lv.v === R.pass ? 'pass' : ''}">
+          <td style="width:40px"><span class="rs-badge rs${lv.v}">${lv.v}</span></td>
+          <td style="width:150px;font-weight:600">${lv.label}${now && now.score === lv.v ? ' <span class="lv-now">目前</span>' : ''}</td>
+          <td>${lv.desc}</td></tr>`).join('')}</tbody></table>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
+          <span id="rot-f-picked" style="font-size:13px;color:var(--text2)">點一列選擇分數</span>
+          <input id="rot-f-note" placeholder="備註（選填）" style="width:220px">
+          <button class="btn btn-sm btn-primary" onclick="rotSubmitScore()">確定</button>
+          <button class="btn btn-sm btn-default" onclick="rotForm(null)">取消</button>
+          <span class="hint" style="flex-basis:auto">第 ${R.pass} 級（虛線）以上算熟悉・同一天再評一次會取代當天那筆</span>
+        </div></div>`;
     } else if (f && (f.type === 'swap' || f.type === 'add')) {
       const choices = others.filter(n => !it.owners.includes(n));
       html += `<div class="rot-form">${f.type === 'swap' ? `由 <b>${esc(f.from)}</b> 換成` : '新增負責人'}
@@ -2756,6 +2773,11 @@ async function rotSave(extra, msg) {
   if (err) toast((M[err] || '儲存失敗：' + err) + (r && r.done ? `（前 ${r.done} 項已存）` : ''), 4000);
   else if (msg) toast(msg);
   return !err;
+}
+function rotPickLv(v) {
+  document.getElementById('rot-f-score').value = v;
+  document.querySelectorAll('.rot-lvtbl tr').forEach(tr => tr.classList.toggle('sel', Number(tr.dataset.v) === v));
+  document.getElementById('rot-f-picked').innerHTML = `已選 <b style="color:var(--accent)">${v} ${ROT_LEVELS[v].label}</b>`;
 }
 function rotPickName() {
   const v = (document.getElementById('rot-f-to') || {}).value || '';
