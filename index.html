@@ -2179,7 +2179,7 @@ function refreshAll() {
 const R = {
   loaded:false, open:false, isPublic:false, err:'', role:'guest', me:null, pass:2,
   staleDays:183, today:'', people:[], items:[], subs:[], hist:[], scores:[],
-  group:'', person:'', q:'', view:'map', openGid:null, form:null
+  group:'', person:'', q:'', view:'map', openGid:null, form:null, draft:null, saving:false
 };
 // 評分 1–10（115/10/30 定案）；ROT_LEVELS[score] 取等級說明
 const ROT_LEVELS = [null,
@@ -2217,6 +2217,13 @@ async function rotLoad() {
   try {
     const d = await apiGet({ action:'rotRead' });
     if (!d.ok) throw new Error(d.error || 'load failed');
+    rotApply(d);
+  } catch (e) {
+    R.loaded = false; R.open = isAdmin(); R.err = e.message;
+  }
+}
+function rotApply(d) {
+  {
     R.open = !!d.open;
     if (!d.open) { R.loaded = false; R.err = ''; R.role = d.role; return; }
     Object.assign(R, {
@@ -2229,8 +2236,6 @@ async function rotLoad() {
     else if (R.person && !R.people.some(p => p.name === R.person)) R.person = '';
     _rotBy = {};
     R.scores.forEach(s => (_rotBy[`${s.gid}|${s.name}`] = _rotBy[`${s.gid}|${s.name}`] || []).push(s));
-  } catch (e) {
-    R.loaded = false; R.open = isAdmin(); R.err = e.message;
   }
 }
 
@@ -2321,7 +2326,7 @@ function rotLegend() {
     <span>完成門檻 ≥${R.pass}</span></div>`;
 }
 function rotYmInput(val, onchange, w) {
-  return `<input value="${esc(val || '')}" placeholder="年/月" style="width:${w || 70}px" onchange="${onchange}">`;
+  return `<input value="${esc(val || '')}" placeholder="年/月" style="width:${w || 70}px" oninput="${onchange}">`;
 }
 function rotScoreSelect(cur, onchange, emptyLabel) {
   return `<select onchange="${onchange}"><option value="">${emptyLabel || '未評'}</option>${ROT_LV.map(lv =>
@@ -2554,16 +2559,52 @@ function rotTodoHtml() {
   </tbody></table>`;
 }
 
-// ── 明細視窗 ────────────────────────────────
+// ── 明細視窗（改好再一次儲存）──────────────
+//  R.draft.hist[id] = {from,to,score,note} 尚未儲存的歷程修改；R.draft.deps = 尚未儲存的代理人清單
+function rotDraftReset() { R.draft = { hist:{}, deps:null }; }
+function rotDV(h, f) {
+  const d = R.draft && R.draft.hist[h.id];
+  return d && d[f] !== undefined ? d[f] : h[f];
+}
+function rotDeps(it) { return R.draft && R.draft.deps ? R.draft.deps : it.deputies; }
+function rotDirtyCount() {
+  if (!R.draft) return 0;
+  return Object.values(R.draft.hist).reduce((n, o) => n + Object.keys(o).length, 0) + (R.draft.deps ? 1 : 0);
+}
+function rotDraft(id, f, v) {
+  const h = R.hist.find(x => x.id === id);
+  if (!h) return;
+  const norm = x => (x === null || x === undefined) ? '' : String(x).trim();
+  const d = R.draft.hist[id] = R.draft.hist[id] || {};
+  if (norm(v) === norm(h[f])) delete d[f]; else d[f] = (f === 'score' && v !== '') ? Number(v) : String(v).trim();
+  if (!Object.keys(d).length) delete R.draft.hist[id];
+  rotUpdateBar();
+}
+function rotDraftOps() {
+  const ops = Object.entries(R.draft.hist).map(([id, f]) => Object.assign({ type:'hist', id }, f));
+  if (R.draft.deps) ops.push({ type:'deps', gid:R.openGid, names:R.draft.deps });
+  return ops;
+}
+function rotUpdateBar() {
+  const n = rotDirtyCount();
+  const el = document.getElementById('rot-dirty');
+  if (!el) return;
+  el.innerHTML = n ? `<span style="color:var(--orange);font-weight:600">● 有 ${n} 項修改尚未儲存</span>` : '';
+  document.getElementById('rot-save').style.display = n ? '' : 'none';
+  document.getElementById('rot-discard').style.display = n ? '' : 'none';
+}
+
 function rotOpen(gid) {
   const it = R.items.find(x => x.id === gid);
   if (!it) return;
-  if (R.openGid !== gid) R.form = null;
+  if (R.openGid !== gid) { R.form = null; rotDraftReset(); }
+  if (!R.draft) rotDraftReset();
   R.openGid = gid;
   const isAdm = R.role === 'admin';
   const subs = R.subs.filter(s => s.gid === gid);
   const showDiff = subs.some(s => s.diff != null || s.help);
   const others = R.people.map(p => p.name);
+  const deps = rotDeps(it);
   let html = `<h2><span style="color:var(--text2);font-size:13px;margin-right:6px;">${it.id}</span>${esc(it.name)}</h2>
     <div style="font-size:12px;color:var(--text2);">${[it.baseDiff != null ? `難度${it.baseDiff}` : '', esc(it.note)].filter(Boolean).join('・')}</div>`;
 
@@ -2580,7 +2621,7 @@ function rotOpen(gid) {
       if (!isAdm) return (R.me === o) ? `<tr><td>${rotChip(o)}</td><td>${esc(row && row.from || '—')}</td><td>${cur}</td></tr>`
                                         : `<tr><td>${rotChip(o)}</td><td>—</td><td>—</td></tr>`;
       return `<tr><td>${rotChip(o)}</td>
-        <td>${row ? rotYmInput(row.from, `rotHist('${row.id}',{from:this.value})`) : '—'}</td>
+        <td>${row ? rotYmInput(rotDV(row, 'from'), `rotDraft('${row.id}','from',this.value)`) : '—'}</td>
         <td style="white-space:nowrap">${can ? cur + (rotIsStale(it, o) ? ' <span style="font-size:11px;color:var(--orange)">該評了</span>' : '') : '<span style="font-size:12px;color:var(--text2)">非輪訓人員</span>'}</td>
         <td style="font-size:12px">${can ? rotHistText(gid, o) : ''}</td>
         <td style="white-space:nowrap">${can ? `<button class="btn btn-sm btn-primary" onclick="rotForm('score','${pn}')">＋ 新增評分</button> ` : ''}<button class="btn btn-sm btn-default" onclick="rotForm('swap','${pn}')">換人</button>
@@ -2603,7 +2644,7 @@ function rotOpen(gid) {
         交接年月 <input id="rot-f-month" value="${rotNowYm()}" style="width:70px">
         <button class="btn btn-sm btn-primary" onclick="rotSubmitOwner()">確定</button>
         <button class="btn btn-sm btn-default" onclick="rotForm(null)">取消</button>
-        <div class="hint">${f.type === 'swap' ? `${esc(f.from)} 會移到「歷任負責人」，最後評分自動帶入最新分數（可再改）` : '同一項業務可以有多位負責人'}</div></div>`;
+        <div class="hint">${f.type === 'swap' ? `${esc(f.from)} 會自動移到「歷任負責人」：交接年月當作他的「迄」，最後評分帶入最新分數（可再改）` : '同一項業務可以有多位負責人'}</div></div>`;
     } else if (f && f.type === 'leave') {
       html += `<div class="rot-form">確定 <b>${esc(f.from)}</b> 卸任（不指定接手人）？ 卸任年月 <input id="rot-f-month" value="${rotNowYm()}" style="width:70px">
         <button class="btn btn-sm btn-danger" onclick="rotSubmitOwner()">確定卸任</button>
@@ -2615,10 +2656,10 @@ function rotOpen(gid) {
   html += `</div>`;
 
   // 代理人
-  if (isAdm || it.deputies.length) {
+  if (isAdm || deps.length) {
     html += `<div class="rot-sec"><h4>代理人</h4><div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
-      ${it.deputies.map(d => `<span class="rot-chip dep" style="display:inline-flex;align-items:center;gap:4px;">${esc(d)}${isAdm ? `<button title="移除" onclick="rotDeputy('${gid}','${esc(d)}',false)" style="border:none;background:none;cursor:pointer;color:var(--text2);font-size:13px;line-height:1;">×</button>` : ''}</span>`).join('') || (isAdm ? '' : '—')}
-      ${isAdm ? `<select onchange="if(this.value)rotDeputy('${gid}',this.value,true)"><option value="">＋ 新增代理人</option>${others.filter(n => !it.deputies.includes(n) && !it.owners.includes(n)).map(n => `<option>${esc(n)}</option>`).join('')}</select>` : ''}
+      ${deps.map(d => `<span class="rot-chip dep" style="display:inline-flex;align-items:center;gap:4px;">${esc(d)}${isAdm ? `<button title="移除" onclick="rotDeputy('${esc(d)}',false)" style="border:none;background:none;cursor:pointer;color:var(--text2);font-size:13px;line-height:1;">×</button>` : ''}</span>`).join('') || (isAdm ? '' : '—')}
+      ${isAdm ? `<select onchange="if(this.value)rotDeputy(this.value,true)"><option value="">＋ 新增代理人</option>${others.filter(n => !deps.includes(n) && !it.owners.includes(n)).map(n => `<option>${esc(n)}</option>`).join('')}</select>` : ''}
     </div></div>`;
   }
 
@@ -2628,11 +2669,11 @@ function rotOpen(gid) {
     html += `<div class="rot-sec"><h4>歷任負責人</h4>`;
     if (past.length) html += `<table class="rot-tbl"><thead><tr><th>同仁</th><th>起</th><th>迄</th><th>最後評分</th>${isAdm ? '<th>歷次評分</th>' : ''}<th>備註</th>${isAdm ? '<th></th>' : ''}</tr></thead><tbody>
       ${past.map(h => isAdm ? `<tr><td>${rotChip(h.name)}</td>
-        <td>${rotYmInput(h.from, `rotHist('${h.id}',{from:this.value})`)}</td>
-        <td>${rotYmInput(h.to, `rotHist('${h.id}',{to:this.value})`)}</td>
-        <td>${rotIsPerson(h.name) ? rotScoreSelect(h.score, `rotHist('${h.id}',{score:this.value})`, '待補') : '—'}</td>
+        <td>${rotYmInput(rotDV(h, 'from'), `rotDraft('${h.id}','from',this.value)`)}</td>
+        <td>${rotYmInput(rotDV(h, 'to'), `rotDraft('${h.id}','to',this.value)`)}</td>
+        <td>${rotIsPerson(h.name) ? rotScoreSelect(rotDV(h, 'score'), `rotDraft('${h.id}','score',this.value)`, '待補') : '—'}</td>
         <td style="font-size:12px;white-space:nowrap">${rotIsPerson(h.name) ? rotHistText(gid, h.name) : ''}</td>
-        <td><input value="${esc(h.note)}" style="width:130px" onchange="rotHist('${h.id}',{note:this.value})"></td>
+        <td><input value="${esc(rotDV(h, 'note'))}" style="width:130px" oninput="rotDraft('${h.id}','note',this.value)"></td>
         <td><button class="btn btn-sm btn-danger" title="刪除這筆" onclick="rotHistDel('${h.id}')">刪除</button></td></tr>`
       : `<tr><td>${rotChip(h.name)}</td><td>${esc(h.from || '—')}</td><td>${esc(h.to || '—')}</td><td>${rotBadge(h.score != null ? { score:h.score, past:true } : null)}</td><td style="font-size:12px;color:var(--text2)">${esc(h.note)}</td></tr>`).join('')}
     </tbody></table>`;
@@ -2657,11 +2698,17 @@ function rotOpen(gid) {
     ${subs.map(s => `<tr><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${esc(s.owner)}</td>${showDiff ? `<td>${s.diff != null ? s.diff : '—'}</td><td>${esc(s.help) || '—'}</td>` : ''}</tr>`).join('')}
     </tbody></table>` : '<div style="font-size:12px;color:var(--text2)">沒有細項</div>'}</div>`;
 
-  html += `<div class="modal-actions"><button class="btn btn-default" onclick="rotCloseModal()">關閉</button></div>`;
+  html += `<div class="modal-actions rot-actions">
+    <span id="rot-dirty" style="flex:1;font-size:13px;align-self:center"></span>
+    ${isAdm ? `<button class="btn btn-default" id="rot-discard" style="display:none" onclick="rotDiscard()">放棄修改</button>
+    <button class="btn btn-primary" id="rot-save" style="display:none" onclick="rotSave([], '已儲存')">儲存</button>` : ''}
+    <button class="btn btn-default" onclick="rotCloseModal()">關閉</button></div>`;
   document.getElementById('rot-modal-box').innerHTML = html;
   document.getElementById('rot-modal').classList.add('active');
   const sel = document.getElementById('rot-f-to');
   if (sel) sel.addEventListener('change', () => { document.getElementById('rot-f-other').style.display = sel.value === '__other' ? '' : 'none'; });
+  if (isAdm) rotUpdateBar();
+  if (R.saving) rotSetSaving(true);
 }
 // 某人在某業務的歷次評分（管理員）：115/04/12 2 → 115/10/30 3，每筆可刪
 function rotHistText(gid, name) {
@@ -2669,27 +2716,46 @@ function rotHistText(gid, name) {
   if (!r.length) return '<span style="color:var(--text2)">—</span>';
   return r.map(x => `<span style="white-space:nowrap" title="${esc(x.note)}">${rocDate(x.date)} <b>${x.score}</b><button title="刪除這筆" onclick="rotDelScore('${gid}','${esc(name)}','${x.date}')" style="border:none;background:none;cursor:pointer;color:var(--text2);font-size:12px;padding:0 2px;">×</button></span>`).join(' → ');
 }
-function rotCloseModal() { document.getElementById('rot-modal').classList.remove('active'); R.openGid = null; R.form = null; }
+function rotCloseModal() {
+  const n = rotDirtyCount();
+  if (n && !confirm(`還有 ${n} 項修改沒有儲存，確定要關閉並放棄嗎？`)) return;
+  document.getElementById('rot-modal').classList.remove('active');
+  R.openGid = null; R.form = null; rotDraftReset();
+}
+function rotDiscard() {
+  if (!confirm('放棄所有尚未儲存的修改？')) return;
+  rotDraftReset(); rotOpen(R.openGid);
+}
 function rotForm(type, from) { R.form = type ? { type, from } : null; rotOpen(R.openGid); }
 
-// 修改後重新載入並重畫（保留明細視窗）
-async function rotAfterChange(msg) {
-  await rotLoad();
-  renderRot(true);
-  if (R.openGid && document.getElementById('rot-modal').classList.contains('active')) rotOpen(R.openGid);
-  if (msg) toast(msg);
+// 一次送出：尚未儲存的修改＋這次的動作；後端寫完直接回傳最新資料（一趟來回）
+function rotSetSaving(on) {
+  R.saving = on;
+  const box = document.getElementById('rot-modal-box');
+  if (box) box.querySelectorAll('button, select, input').forEach(el => { el.disabled = on; });
+  const b = document.getElementById('rot-save');
+  if (b) { b.textContent = on ? '儲存中…' : '儲存'; if (on) b.style.display = ''; }
+  const d = document.getElementById('rot-dirty');
+  if (d && on) d.innerHTML = '<span style="color:var(--accent)">儲存中…</span>';
 }
-async function rotCall(params, msg) {
-  try {
-    const r = await apiGet(params);
-    if (!r.ok) throw new Error(r.error);
-    await rotAfterChange(msg);
-    return r;
-  } catch (e) {
-    const M = { forbidden:'登入已逾時，請重新登入', 'bad month':'年月格式請用 115/03', 'already owner':'這個人已經是負責人', 'not current owner':'資料已變動，請重新整理' };
-    toast(M[e.message] || '儲存失敗：' + e.message, 3500);
-    await rotAfterChange();
-  }
+async function rotSave(extra, msg) {
+  if (R.role !== 'admin' || R.saving) return false;
+  const modalOpen = R.openGid && document.getElementById('rot-modal').classList.contains('active');
+  const ops = (modalOpen ? rotDraftOps() : []).concat(extra || []);
+  if (!ops.length) return true;
+  rotSetSaving(true);
+  let r = null, err = null;
+  try { r = await apiGet({ action:'rotBatch', ops: JSON.stringify(ops) }); if (!r.ok) err = r.error; }
+  catch (e) { err = e.message || '連線失敗'; }
+  R.saving = false;
+  if (r && r.data && r.data.ok) rotApply(r.data);
+  if (!err) { if (modalOpen) rotDraftReset(); R.form = null; }
+  renderRot(true);
+  if (modalOpen) rotOpen(R.openGid);
+  const M = { forbidden:'登入已逾時，請重新登入', 'bad month':'年月格式請用 115/03', 'bad score':'分數要是 1–10', 'already owner':'這個人已經是負責人', 'not current owner':'資料已變動，請重新整理' };
+  if (err) toast((M[err] || '儲存失敗：' + err) + (r && r.done ? `（前 ${r.done} 項已存）` : ''), 4000);
+  else if (msg) toast(msg);
+  return !err;
 }
 function rotPickName() {
   const v = (document.getElementById('rot-f-to') || {}).value || '';
@@ -2700,9 +2766,8 @@ async function rotSubmitOwner() {
   const month = document.getElementById('rot-f-month').value.trim();
   const to = f.type === 'leave' ? '' : rotPickName();
   if (f.type !== 'leave' && !to) { toast('請選擇同仁'); return; }
-  R.form = null;
-  await rotCall({ action:'rotChangeOwner', gid, from: f.from || '', to, month },
-    f.type === 'swap' ? `已由 ${f.from} 換成 ${to}` : f.type === 'add' ? `已新增負責人 ${to}` : `${f.from} 已卸任`);
+  await rotSave([{ type:'owner', gid, from: f.from || '', to, month }],
+    f.type === 'swap' ? `已由 ${f.from} 換成 ${to}，${f.from} 已移到歷任負責人` : f.type === 'add' ? `已新增負責人 ${to}` : `${f.from} 已卸任`);
 }
 async function rotSubmitPast() {
   const name = rotPickName();
@@ -2710,18 +2775,19 @@ async function rotSubmitPast() {
   const from = document.getElementById('rot-f-from').value.trim();
   const to = document.getElementById('rot-f-month').value.trim();
   const score = document.getElementById('rot-f-score').value;
-  R.form = null;
-  await rotCall({ action:'rotHistSave', gid:R.openGid, name, from, to, score }, `已補登 ${name}`);
+  await rotSave([{ type:'histAdd', gid:R.openGid, name, from, to, score }], `已補登 ${name}`);
 }
-async function rotHist(id, fields) { await rotCall(Object.assign({ action:'rotHistSave', id }, fields), '已儲存'); }
 async function rotHistDel(id) {
   if (!confirm('確定刪除這筆歷任紀錄？')) return;
-  await rotCall({ action:'rotHistSave', id, del:1 }, '已刪除');
+  delete R.draft.hist[id];
+  await rotSave([{ type:'histDel', id }], '已刪除');
 }
-async function rotDeputy(gid, name, add) {
-  const it = R.items.find(x => x.id === gid);
-  const names = add ? it.deputies.concat([name]) : it.deputies.filter(n => n !== name);
-  await rotCall({ action:'rotSetDeputies', gid, names: JSON.stringify(names) }, add ? `已新增代理人 ${name}` : `已移除代理人 ${name}`);
+function rotDeputy(name, add) {
+  const it = R.items.find(x => x.id === R.openGid);
+  const cur = rotDeps(it);
+  const next = add ? cur.concat([name]) : cur.filter(n => n !== name);
+  R.draft.deps = (next.join('、') === it.deputies.join('、')) ? null : next;
+  rotOpen(R.openGid);
 }
 
 // ── 評分：新增一筆（記今天日期）────────────
@@ -2730,12 +2796,11 @@ async function rotSubmitScore() {
   const v = document.getElementById('rot-f-score').value;
   if (v === '') { toast('請選擇分數'); return; }
   const note = document.getElementById('rot-f-note').value.trim();
-  R.form = null;
-  await rotCall({ action:'rotAddScore', gid, name, score:v, note }, `${name}：${v} 分（${rocDate(R.today)}）`);
+  await rotSave([{ type:'score', gid, name, score:Number(v), note }], `${name}：${v} 分（${rocDate(R.today)}）`);
 }
 async function rotDelScore(gid, name, date) {
   if (!confirm(`刪除 ${name} 在 ${rocDate(date)} 的評分？`)) return;
-  await rotCall({ action:'rotDelScore', gid, name, date }, '已刪除');
+  await rotSave([{ type:'scoreDel', gid, name, date }], '已刪除');
 }
 // 評分總表：點格子直接選分數，新增一筆今天的評分
 function rotOpenPicker(e, gid, name) {
@@ -2760,7 +2825,7 @@ async function rotPickerSave(v) {
   if (!_rotPick) return;
   const { gid, name } = _rotPick;
   rotClosePicker();
-  await rotCall({ action:'rotAddScore', gid, name, score:String(v) }, `${name}：${v} 分（${rocDate(R.today)}）`);
+  await rotSave([{ type:'score', gid, name, score:v }], `${name}：${v} 分（${rocDate(R.today)}）`);
 }
 
 
