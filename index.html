@@ -337,6 +337,98 @@ table.delay-table tr:last-child td{border-bottom:none;}
   /* Meeting modal */
   #meeting-modal-overlay > div{min-width:unset;padding:16px;width:95vw;}
 }
+
+/* ── 業務地圖／輪訓 ── */
+.rot-note{background:var(--accent-light);color:var(--accent);border-radius:var(--radius);padding:10px 14px;font-size:13px;margin-bottom:16px;}
+.rot-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.rot-people{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-bottom:24px;}
+.rot-pcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);cursor:pointer;transition:box-shadow .15s,border-color .15s;}
+.rot-pcard:hover{box-shadow:var(--shadow-md);border-color:var(--accent);}
+.rot-pcard .name{font-size:15px;font-weight:700;margin-bottom:2px;}
+.rot-pcard .meta{font-size:12px;color:var(--text2);margin-bottom:10px;}
+.rot-pcard .pct{font-size:12px;color:var(--text2);}
+.rot-viewbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.rot-group{margin-bottom:22px;}
+.rot-group h4{font-size:13px;font-weight:700;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.rot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;}
+.rot-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow);cursor:pointer;display:flex;flex-direction:column;gap:8px;transition:border-color .15s,box-shadow .15s;}
+.rot-card:hover{border-color:var(--accent);box-shadow:var(--shadow-md);}
+.rot-card.mine{border-left:4px solid var(--accent);}
+.rot-card .top{display:flex;align-items:flex-start;gap:8px;}
+.rot-card .gid{font-size:11px;color:var(--text2);font-weight:600;min-width:28px;padding-top:2px;}
+.rot-card .nm{font-size:13px;font-weight:600;line-height:1.4;flex:1;}
+.rot-card .owners{display:flex;flex-wrap:wrap;gap:4px;}
+.rot-card .foot{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:11px;color:var(--text2);}
+.rot-chip{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;white-space:nowrap;background:var(--gray-light);color:var(--gray);}
+.rot-chip.dep{background:transparent;border:1px dashed var(--border);color:var(--text2);font-weight:500;}
+.rot-dots{display:flex;gap:3px;}
+.rot-dot{width:12px;height:12px;border-radius:3px;border:1px solid var(--border);}
+.rs-badge{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:22px;padding:0 6px;border-radius:6px;font-size:12px;font-weight:700;}
+.rsn{background:transparent;color:var(--text2);border:1px dashed var(--border);}
+.rs0{background:var(--gray-light);color:var(--gray);}
+.rs1{background:#e0ecff;color:#1e40af;}
+.rs2{background:#a9c8fb;color:#1e3a8a;}
+.rs3{background:#4f86f0;color:#fff;}
+.rs4{background:#1d4ed8;color:#fff;}
+.rs-carry{opacity:.55;}
+.rot-legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--text2);align-items:center;}
+.rot-legend span{display:inline-flex;align-items:center;gap:4px;}
+table.rot-mx{border-collapse:collapse;background:var(--surface);box-shadow:var(--shadow);min-width:100%;}
+table.rot-mx th,table.rot-mx td{border:1px solid var(--border);}
+table.rot-mx thead th{background:var(--surface2);font-size:12px;font-weight:600;color:var(--text2);padding:8px 10px;position:sticky;top:0;z-index:10;white-space:nowrap;}
+table.rot-mx thead th.task-col{text-align:left;left:0;z-index:20;min-width:240px;}
+table.rot-mx td.task-info{padding:8px 12px;position:sticky;left:0;background:var(--surface);z-index:5;min-width:240px;max-width:300px;}
+table.rot-mx tr.grp td{background:var(--surface2);font-size:12px;font-weight:700;color:var(--text2);padding:6px 12px;}
+table.rot-mx td.sc{text-align:center;width:84px;min-width:72px;padding:4px;}
+table.rot-mx td.sum{text-align:center;font-size:12px;color:var(--text2);padding:4px 8px;white-space:nowrap;}
+.rot-cell{position:relative;display:inline-flex;align-items:center;justify-content:center;width:60px;height:30px;border-radius:6px;font-size:12px;font-weight:700;border:none;font-family:inherit;}
+button.rot-cell{cursor:pointer;}
+button.rot-cell:hover{outline:2px solid var(--accent);outline-offset:1px;}
+.rot-cell .own{position:absolute;top:-7px;right:-5px;font-size:12px;line-height:1;color:#f59e0b;text-shadow:0 0 2px #fff,0 0 2px #fff;}
+.rot-cell.has-contact::after{content:'';position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:currentColor;opacity:.6;}
+.rot-cell.warn-solo{box-shadow:inset 0 0 0 2px var(--orange);}
+.rot-prof{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:18px;display:grid;grid-template-columns:minmax(220px,1fr) 2fr;gap:20px;}
+.rot-prof h3{font-size:17px;font-weight:700;}
+.rot-prof .sub{font-size:12px;color:var(--text2);margin:4px 0 14px;}
+.rot-big{font-size:28px;font-weight:700;}
+.rot-big small{font-size:13px;color:var(--text2);font-weight:500;margin-left:4px;}
+.rot-hist{width:100%;border-collapse:collapse;font-size:12px;}
+.rot-hist th,.rot-hist td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:center;}
+.rot-hist th{color:var(--text2);font-weight:600;background:var(--surface2);}
+.rot-hist td:first-child,.rot-hist th:first-child{text-align:left;}
+.rot-lists{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px;}
+.rot-list{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.rot-list h5{font-size:13px;font-weight:700;padding:10px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.rot-li{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border);font-size:12px;cursor:pointer;}
+.rot-li:last-child{border-bottom:none;}
+.rot-li:hover{background:var(--surface2);}
+.rot-li .t{flex:1;line-height:1.4;}
+.rot-li .g{color:var(--text2);font-size:11px;min-width:26px;}
+.rot-empty{padding:14px 12px;font-size:12px;color:var(--text2);}
+#rot-modal{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;display:none;align-items:center;justify-content:center;}
+#rot-modal.active{display:flex;}
+#rot-modal-box{background:var(--surface);border-radius:var(--radius);padding:22px;width:92vw;max-width:720px;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-md);}
+#rot-modal-box h2{font-size:16px;font-weight:700;margin-bottom:4px;}
+.rot-sec{margin-top:16px;}
+.rot-sec h4{font-size:13px;font-weight:700;margin-bottom:8px;color:var(--text2);}
+table.rot-tbl{width:100%;border-collapse:collapse;font-size:12px;}
+table.rot-tbl th,table.rot-tbl td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle;}
+table.rot-tbl th{background:var(--surface2);color:var(--text2);font-weight:600;}
+table.rot-tbl select,table.rot-tbl input{padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;}
+#rot-picker{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px;box-shadow:var(--shadow-md);z-index:250;display:none;min-width:190px;}
+#rot-picker .picker-title{font-size:11px;color:var(--text2);padding:4px 8px 8px;border-bottom:1px solid var(--border);margin-bottom:6px;line-height:1.5;}
+@media(max-width:900px){
+  .rot-stats{grid-template-columns:repeat(2,1fr);}
+  .rot-lists{grid-template-columns:repeat(2,1fr);}
+  .rot-prof{grid-template-columns:1fr;}
+}
+@media(max-width:600px){
+  .rot-lists{grid-template-columns:1fr;}
+  .rot-grid{grid-template-columns:1fr;}
+  table.rot-mx td.task-info,table.rot-mx thead th.task-col{min-width:150px;max-width:170px;}
+  .rot-cell{width:44px;height:28px;}
+  table.rot-mx td.sc{width:52px;min-width:52px;}
+}
 </style>
 </head>
 <body>
@@ -356,6 +448,7 @@ table.delay-table tr:last-child td{border-bottom:none;}
 <div id="tabs">
   <button class="tab-btn active" data-panel="panel-overview" onclick="switchTab(this)">📊 總覽</button>
   <button class="tab-btn" data-panel="panel-matrix" onclick="switchTab(this)">🗂 追蹤矩陣</button>
+  <button class="tab-btn" data-panel="panel-rot" onclick="switchTab(this)">🗺 業務地圖</button>
   <button class="tab-btn hidden" id="tab-items" data-panel="panel-items" onclick="switchTab(this)">📝 任務管理</button>
   <button class="tab-btn hidden" id="tab-settings" data-panel="panel-settings" onclick="switchTab(this)">⚙️ 設定</button>
 </div>
@@ -498,6 +591,20 @@ table.delay-table tr:last-child td{border-bottom:none;}
     </div>
   </div>
 
+  <!-- 業務地圖／輪訓 -->
+  <div class="panel" id="panel-rot">
+    <div class="filter-bar">
+      <label>評核期別：</label>
+      <select id="rot-period" onchange="rotOnFilter()"></select>
+      <button class="btn btn-sm btn-default" id="rot-period-btn" style="display:none" onclick="rotNewPeriod()">＋ 開新期別</button>
+      <label>群組：</label>
+      <select id="rot-group" onchange="rotOnFilter()"></select>
+      <label id="rot-person-label" style="display:none">人員：</label>
+      <select id="rot-person" style="display:none" onchange="rotOnFilter()"></select>
+      <input id="rot-q" placeholder="搜尋業務" oninput="rotOnFilter()" style="min-width:140px;">
+    </div>
+    <div id="rot-body"></div>
+  </div>
   <!-- Settings -->
   <div class="panel" id="panel-settings">
     <div class="settings-section">
@@ -548,6 +655,12 @@ table.delay-table tr:last-child td{border-bottom:none;}
   </div>
 </div>
 
+<!-- 業務地圖：明細 -->
+<div id="rot-modal" onclick="if(event.target===this)rotCloseModal()">
+  <div id="rot-modal-box"></div>
+</div>
+<!-- 業務地圖：打分 -->
+<div id="rot-picker"></div>
 <!-- Login Modal -->
 <div id="login-modal">
   <div id="login-box">
@@ -684,7 +797,7 @@ const G = {
   items:     [],  // {id, name, type, deadline, deadtime, members[], note}
   statusMap: {},  // key → {status, completedAt}
   holidays:  [],  // ['2026-01-01', ...]
-  cfg: { adminUser:'admin', adminPass:'admin' }
+  cfg: { adminUser:'' }
 };
 
 // 內建假日（不需手動設定；與 Sheet 假日合併，去重）
@@ -802,34 +915,39 @@ function currentUser(){ return session('wt_user') || null; }
 // 新增任務專用帳號（帳號=密碼）：只能新增任務，無其他功能
 const TASK_ONLY_ACCOUNTS = ['980857','A80668','B31061','B40465','B50385'];
 
-function doLogin() {
+async function doLogin() {
   const u = document.getElementById('login-user').value.trim();
   const p = document.getElementById('login-pass').value;
   const err = document.getElementById('login-error');
   err.textContent = '';
-  if (u === G.cfg.adminUser && p === G.cfg.adminPass) {
-    session('wt_admin','1'); session('wt_user','管理員');
-    closeLoginModal(); applyAuth(); toast('已以管理員身分登入'); refreshAll();
-    return;
-  }
   // 新增任務專用帳號（帳號=密碼）
   if (TASK_ONLY_ACCOUNTS.includes(u) && p === u) {
     session('wt_taskonly','1'); session('wt_user', u);
     closeLoginModal(); applyAuth(); toast(`已登入：${u}`); refreshAll();
     return;
   }
-  const m = G.members.find(x => x.empId === u && x.pwd === p);
-  if (m) {
-    session('wt_user', m.name);
-    closeLoginModal(); applyAuth(); toast(`已登入：${m.name}`); refreshAll();
-    return;
-  }
-  err.textContent = '人事號或密碼錯誤';
+  // 管理員與同仁：由後端驗證並發 token（密碼不再下載到瀏覽器）
+  showLoading(true);
+  let r = null;
+  try { r = await apiGet({ action:'login', user:u, pass:p, token:'' }); } catch(e) {}
+  showLoading(false);
+  if (!r || !r.ok) { err.textContent = r ? '人事號或密碼錯誤' : '無法連線，請稍後再試'; return; }
+  session('wt_token', r.token);
+  if (r.role === 'admin') { session('wt_admin','1'); session('wt_user','管理員'); }
+  else session('wt_user', r.name);
+  closeLoginModal();
+  toast(r.role === 'admin' ? '已以管理員身分登入' : `已登入：${r.name}`);
+  await loadAll();   // 重新載入：管理員才拿得到人員細節；業務地圖依身分回傳分數
 }
 
-function doLogout() {
-  ['wt_admin','wt_taskonly','wt_subadmin','wt_user'].forEach(k => session(k, null));
-  applyAuth(); toast('已登出'); refreshAll();
+function clearSession() {
+  ['wt_admin','wt_taskonly','wt_subadmin','wt_user','wt_token'].forEach(k => session(k, null));
+}
+
+async function doLogout() {
+  clearSession();
+  toast('已登出');
+  await loadAll();
 }
 
 function applyAuth() {
@@ -851,6 +969,8 @@ function applyAuth() {
 //  API
 // ══════════════════════════════════════════════
 async function apiGet(params) {
+  const tk = session('wt_token');
+  if (tk && params.token === undefined) params = Object.assign({}, params, { token: tk });
   const qs = Object.entries(params)
     .map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(typeof v==='object'?JSON.stringify(v):v)}`)
     .join('&');
@@ -863,8 +983,11 @@ async function apiGet(params) {
 // ══════════════════════════════════════════════
 async function loadAll() {
   showLoading(true);
+  // 舊版登入（沒有 token）的同仁／管理員 session 一律清掉，請重新登入
+  if (currentUser() && !isTaskOnly() && !session('wt_token')) clearSession();
   try {
     const d = await apiGet({ action:'read', year: G.year });
+    if (d.authOk === false) { clearSession(); toast('登入已逾時，請重新登入', 3500); }
     G.members   = d.members   || [];
     G.items     = d.items     || [];
     G.holidays  = d.holidays  || [];
@@ -882,6 +1005,7 @@ async function loadAll() {
     normalizeData();
     mergeBuiltinHolidays();
   }
+  await rotLoad();
   showLoading(false);
   applyAuth(); populateFilters(); refreshAll();
 }
@@ -906,8 +1030,8 @@ function loadLocal() {
 
 function saveLocal() {
   localStorage.setItem('wt_local', JSON.stringify({
-    members: G.members, items: G.items, holidays: G.holidays,
-    statusMap: G.statusMap, cfg: G.cfg
+    members: G.members.map(({pwd, ...m}) => m), items: G.items, holidays: G.holidays,
+    statusMap: G.statusMap, cfg: { adminUser: G.cfg.adminUser }
   }));
 }
 
@@ -1957,15 +2081,20 @@ async function saveSettings() {
   document.getElementById('year-badge').textContent = G.year;
   saveLocal();
   try {
-    await apiGet({
+    const r = await apiGet({
       action: 'saveSettings',
       members:  JSON.stringify(G.members),
       holidays: JSON.stringify(G.holidays),
       cfg:      JSON.stringify(G.cfg),
       year:     G.year
     });
+    if (r && r.ok === false) { toast(r.error === 'forbidden' ? '登入已逾時，請重新登入後再儲存' : '儲存失敗：' + r.error, 3500); return; }
     toast('設定已儲存');
   } catch(e) { toast('設定已暫存（離線）'); }
+  // 密碼只在送出時帶一次，之後不留在瀏覽器
+  G.members.forEach(m => delete m.pwd);
+  delete G.cfg.adminPass;
+  if (adminPassEl) adminPassEl.value = '';
 }
 
 // ══════════════════════════════════════════════
@@ -1997,6 +2126,7 @@ function switchTab(btn) {
   if (pid==='panel-matrix')    renderMatrix();
   if (pid==='panel-items')     renderItems();
   if (pid==='panel-settings')  renderSettings();
+  if (pid==='panel-rot')       renderRot();
 }
 
 // ══════════════════════════════════════════════
@@ -2016,10 +2146,424 @@ function refreshAll() {
   if (active && active.classList.contains('hidden')) {
     switchTab(document.querySelector('.tab-btn[data-panel="panel-overview"]'));
   }
-  renderOverview(); renderMatrix();
+  renderOverview(); renderMatrix(); renderRot();
   if (isAdmin()) { renderItems(); renderSettings(); }
   else if (isTaskOnly()) { renderItems(); }
 }
+
+// ══════════════════════════════════════════════
+//  業務地圖／輪訓評分
+//  後端 Rotation.gs 依登入身分回傳資料：
+//   未登入＝只有地圖；同仁＝自己的分數；管理員＝全部＋可打分
+// ══════════════════════════════════════════════
+const R = {
+  loaded:false, err:'', role:'guest', me:null, pass:2,
+  cur:'', periods:[], people:[], items:[], subs:[], contacts:[], scores:[],
+  period:'', group:'', person:'', q:'', view:'map'
+};
+const ROT_LEVELS = [
+  { v:0, label:'未接觸' }, { v:1, label:'訓練中' }, { v:2, label:'可獨立執行' },
+  { v:3, label:'可代理' }, { v:4, label:'可教導他人' }
+];
+const ROT_GROUPS = ['醫事人員培訓','醫師與學生訓練','師資培育','醫學研究','行政與資訊'];
+const ROT_PCOLORS = [
+  ['#dbeafe','#1d4ed8'], ['#dcfce7','#166534'], ['#fce7f3','#9d174d'],
+  ['#fef3c7','#92400e'], ['#ede9fe','#5b21b6'], ['#e0f2fe','#0369a1']
+];
+let _rotIdx = {}, _rotPick = null;
+
+function esc(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function rotLoad() {
+  try {
+    const d = await apiGet({ action:'rotRead' });
+    if (!d.ok) throw new Error(d.error || 'load failed');
+    Object.assign(R, {
+      loaded:true, err:'', role:d.role, me:d.me, pass:d.passScore,
+      cur:d.currentPeriod, periods:d.periods, people:d.people, items:d.items,
+      subs:d.subs, contacts:d.contacts, scores:d.scores
+    });
+    if (!R.period || !R.periods.includes(R.period)) R.period = R.cur;
+    if (R.role !== 'admin') R.person = R.role === 'member' ? R.me : '';
+    else if (R.person && !R.people.some(p => p.name === R.person)) R.person = '';
+    if (R.role !== 'admin' && R.view === 'matrix') R.view = 'map';
+    _rotIdx = {};
+    R.scores.forEach(s => { _rotIdx[`${s.period}|${s.gid}|${s.name}`] = s; });
+  } catch (e) {
+    R.loaded = false; R.err = e.message;
+  }
+}
+
+// ── 計算 ────────────────────────────────────
+function periodCmp(a, b) {
+  const ya = parseInt(a, 10), yb = parseInt(b, 10);
+  if (ya !== yb) return ya - yb;
+  return (a.slice(-1) === '上' ? 0 : 1) - (b.slice(-1) === '上' ? 0 : 1);
+}
+// 到某期為止最近一次的分數（該期沒打就沿用前一期）
+function rotLatest(gid, name, upto) {
+  for (let i = R.periods.length - 1; i >= 0; i--) {
+    const p = R.periods[i];
+    if (periodCmp(p, upto) > 0) continue;
+    const s = _rotIdx[`${p}|${gid}|${name}`];
+    if (s) return { score:s.score, period:p, carried: p !== upto, date:s.date, note:s.note };
+  }
+  return null;
+}
+function rotIsOwner(it, name)  { return it.owners.includes(name); }
+function rotContact(gid, name) { const c = R.contacts.find(x => x.gid === gid && x.name === name); return c ? c.text : ''; }
+function rotPersonIdx(name)    { return R.people.findIndex(p => p.name === name); }
+function rotStats(name, period) {
+  let done = 0, ownN = 0, ownSum = 0, ownScored = 0, scored = 0;
+  R.items.forEach(it => {
+    const l = rotLatest(it.id, name, period);
+    if (l) scored++;
+    if (l && l.score >= R.pass) done++;
+    if (rotIsOwner(it, name)) { ownN++; if (l) { ownSum += l.score; ownScored++; } }
+  });
+  return { done, total:R.items.length, ownN, ownAvg: ownScored ? ownSum / ownScored : null, scored };
+}
+function rotTenure(onboard) {
+  const m = String(onboard || '').match(/^(\d{2,3})\/(\d{1,2})$/);
+  if (!m) return '';
+  const now = new Date();
+  const months = ((now.getFullYear() - 1911) * 12 + now.getMonth() + 1) - (Number(m[1]) * 12 + Number(m[2]));
+  return months < 12 ? `${Math.max(months, 0)} 個月` : `${(months / 12).toFixed(1)} 年`;
+}
+function rotFilteredItems() {
+  const q = R.q.trim();
+  return R.items.filter(it =>
+    (!R.group || it.group === R.group) &&
+    (!q || it.name.includes(q) || it.id.includes(q.toUpperCase()) ||
+      it.owners.some(o => o.includes(q)) ||
+      R.subs.some(s => s.gid === it.id && s.name.includes(q))));
+}
+
+// ── 小元件 ──────────────────────────────────
+function rotChip(name, dep) {
+  const i = rotPersonIdx(name);
+  if (dep) return `<span class="rot-chip dep">代理 ${esc(name)}</span>`;
+  if (i < 0) return `<span class="rot-chip">${esc(name)}</span>`;
+  const [bg, fg] = ROT_PCOLORS[i % ROT_PCOLORS.length];
+  return `<span class="rot-chip" style="background:${bg};color:${fg}">${esc(name)}</span>`;
+}
+function rotBadge(l) {
+  if (!l) return `<span class="rs-badge rsn" title="尚未評分">—</span>`;
+  const lv = ROT_LEVELS[l.score];
+  return `<span class="rs-badge rs${l.score}${l.carried ? ' rs-carry' : ''}" title="${lv.label}${l.carried ? `（沿用 ${l.period}）` : ''}">${l.score}</span>`;
+}
+function rotLegend() {
+  return `<div class="rot-legend">${ROT_LEVELS.map(l => `<span><span class="rs-badge rs${l.v}">${l.v}</span>${l.label}</span>`).join('')}
+    <span><span class="rs-badge rs2 rs-carry">2</span>淡色＝沿用前一期</span>
+    <span>★ 主責　· 有接觸紀錄</span><span>完成門檻 ≥${R.pass}</span></div>`;
+}
+
+// ── 主畫面 ──────────────────────────────────
+function rotFillFilters() {
+  const per = document.getElementById('rot-period');
+  per.innerHTML = R.periods.slice().reverse().map(p =>
+    `<option value="${esc(p)}"${p === R.period ? ' selected' : ''}>${esc(p)}${p === R.cur ? '（目前）' : ''}</option>`).join('');
+  const grp = document.getElementById('rot-group');
+  grp.innerHTML = `<option value="">全部群組</option>` + ROT_GROUPS.map(g =>
+    `<option${g === R.group ? ' selected' : ''}>${g}</option>`).join('');
+  const isAdm = R.role === 'admin';
+  const ps = document.getElementById('rot-person');
+  ps.style.display = document.getElementById('rot-person-label').style.display = isAdm ? '' : 'none';
+  if (isAdm) ps.innerHTML = `<option value="">全部同仁</option>` + R.people.map(p =>
+    `<option${p.name === R.person ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
+  document.getElementById('rot-period-btn').style.display = isAdm ? '' : 'none';
+  // 未登入看不到分數，期別選單沒有意義
+  per.style.display = per.previousElementSibling.style.display = R.role === 'guest' ? 'none' : '';
+}
+function rotOnFilter() {
+  R.period = document.getElementById('rot-period').value || R.period;
+  R.group  = document.getElementById('rot-group').value;
+  if (R.role === 'admin') R.person = document.getElementById('rot-person').value;
+  R.q      = document.getElementById('rot-q').value;
+  renderRot(true);
+}
+function rotSetView(v) { R.view = v; renderRot(true); }
+function rotPickPerson(name) { R.person = name; renderRot(); window.scrollTo({ top:0, behavior:'smooth' }); }
+
+function renderRot(keepFilters) {
+  const body = document.getElementById('rot-body');
+  if (!body) return;
+  if (!R.loaded) {
+    body.innerHTML = `<div class="rot-note" style="background:var(--red-light);color:var(--red)">業務地圖資料載入失敗${R.err ? '：' + esc(R.err) : ''}。請確認 Apps Script 已更新並執行過 setupRotation()。</div>`;
+    return;
+  }
+  if (!keepFilters) rotFillFilters();
+  let html = '';
+  if (R.role === 'guest') {
+    html += `<div class="rot-note">🔒 登入後可查看自己的輪訓評分與歷次變化。</div>`;
+    html += rotMapHtml(null);
+  } else if (R.role === 'member') {
+    html += rotProfileHtml(R.me) + rotMapHtml(R.me);
+  } else if (R.person) {
+    html += `<div class="rot-viewbar"><button class="btn btn-sm btn-default" onclick="rotPickPerson('')">← 全部同仁</button></div>`;
+    html += rotProfileHtml(R.person) + rotMapHtml(R.person);
+  } else {
+    html += rotAdminOverviewHtml();
+    html += `<div class="rot-viewbar">
+      <div class="due-tabs">
+        <button class="due-tab${R.view === 'map' ? ' active' : ''}" onclick="rotSetView('map')">🗺 業務地圖</button>
+        <button class="due-tab${R.view === 'matrix' ? ' active' : ''}" onclick="rotSetView('matrix')">🧮 輪訓矩陣（打分）</button>
+      </div>${R.view === 'matrix' ? rotLegend() : ''}</div>`;
+    html += R.view === 'matrix' ? rotMatrixHtml() : rotMapHtml(null);
+  }
+  body.innerHTML = html;
+}
+
+// 管理員總覽：統計＋每位同仁完成度
+function rotAdminOverviewHtml() {
+  const n = R.items.length, P = R.people.length;
+  let scoredThis = 0;
+  R.items.forEach(it => R.people.forEach(p => { if (_rotIdx[`${R.period}|${it.id}|${p.name}`]) scoredThis++; }));
+  const solo = R.items.filter(it => R.people.filter(p => { const l = rotLatest(it.id, p.name, R.period); return l && l.score >= R.pass; }).length <= 1).length;
+  const stats = R.people.map(p => ({ p, s: rotStats(p.name, R.period) }));
+  const avg = stats.length ? stats.reduce((a, x) => a + x.s.done / x.s.total, 0) / stats.length : 0;
+  return `
+  <div class="rot-stats">
+    <div class="stat-card"><div class="label">業務大項</div><div class="value">${n}<small>項</small></div><div class="sub">${ROT_GROUPS.length} 個群組</div></div>
+    <div class="stat-card"><div class="label">${esc(R.period)} 已評分</div><div class="value">${scoredThis}<small>/ ${n * P}</small></div><div class="sub">${P} 位同仁 × ${n} 項</div></div>
+    <div class="stat-card"><div class="label">只有 1 人以下能獨立執行</div><div class="value" style="color:${solo ? 'var(--orange)' : 'inherit'}">${solo}<small>項</small></div><div class="sub">人員異動時的風險業務</div></div>
+    <div class="stat-card"><div class="label">平均輪訓完成度</div><div class="value">${Math.round(avg * 100)}<small>%</small></div><div class="sub">評分 ≥${R.pass} 的項目比例</div></div>
+  </div>
+  <div class="section-title">同仁輪訓完成度 <span class="badge">${esc(R.period)}</span></div>
+  <div class="rot-people">${stats.map(({ p, s }) => `
+    <div class="rot-pcard" role="button" tabindex="0" onclick="rotPickPerson('${esc(p.name)}')" onkeydown="if(event.key==='Enter')rotPickPerson('${esc(p.name)}')">
+      <div class="name">${esc(p.name)}</div>
+      <div class="meta">到職 ${esc(p.onboard || '—')}${p.onboard ? `・${rotTenure(p.onboard)}` : ''}・主責 ${s.ownN} 項</div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${Math.round(s.done / s.total * 100)}%"></div></div>
+      <div class="pct">完成 ${s.done} / ${s.total} 項（${Math.round(s.done / s.total * 100)}%）${s.ownAvg != null ? `・主責平均 ${s.ownAvg.toFixed(1)} 分` : ''}</div>
+    </div>`).join('')}
+  </div>`;
+}
+
+// 個人頁
+function rotProfileHtml(name) {
+  const p = R.people.find(x => x.name === name);
+  if (!p) return `<div class="rot-note">「${esc(name)}」不在輪訓名單中（輪訓人員表沒有這個姓名），目前只顯示業務地圖。</div>`;
+  const s = rotStats(name, R.period);
+  const pct = Math.round(s.done / s.total * 100);
+  const hist = R.periods.filter(x => periodCmp(x, R.period) <= 0).map(per => {
+    const st = rotStats(name, per);
+    const own = R.items.filter(it => rotIsOwner(it, name));
+    const n = R.items.filter(it => _rotIdx[`${per}|${it.id}|${name}`]).length;
+    return `<tr><td>${esc(per)}</td><td>${n}</td><td>${st.done} / ${st.total}</td><td>${st.ownAvg != null ? st.ownAvg.toFixed(1) : '—'}</td></tr>`;
+  }).join('');
+  // 分類
+  const own = [], done = [], train = [], none = [];
+  R.items.forEach(it => {
+    const l = rotLatest(it.id, name, R.period);
+    const c = rotContact(it.id, name);
+    const row = { it, l, c };
+    if (rotIsOwner(it, name)) own.push(row);
+    else if (l && l.score >= R.pass) done.push(row);
+    else if ((l && l.score >= 1) || c) train.push(row);
+    else none.push(row);
+  });
+  const list = (title, rows, empty) => `
+    <div class="rot-list"><h5>${title}<span class="badge" style="background:var(--surface2);color:var(--text2);border-radius:10px;padding:1px 8px;font-size:11px;">${rows.length}</span></h5>
+    ${rows.length ? rows.map(({ it, l, c }) => `
+      <div class="rot-li" onclick="rotOpen('${it.id}')" title="${esc(c)}">
+        <span class="g">${it.id}</span><span class="t">${esc(it.name)}${c && !l ? `<br><span style="color:var(--text2);font-size:11px;">${esc(c)}</span>` : ''}</span>${rotBadge(l)}
+      </div>`).join('') : `<div class="rot-empty">${empty}</div>`}</div>`;
+  return `
+  <div class="rot-prof">
+    <div>
+      <h3>${esc(name)}</h3>
+      <div class="sub">到職 ${esc(p.onboard || '—')}${p.onboard ? `・年資 ${rotTenure(p.onboard)}` : ''}・主責 ${s.ownN} 項</div>
+      <div class="label" style="font-size:12px;color:var(--text2);margin-bottom:4px;">${esc(R.period)} 輪訓完成度（評分 ≥${R.pass}）</div>
+      <div class="rot-big">${s.done}<small>/ ${s.total} 項・${pct}%</small></div>
+      <div class="progress-bar-wrap" style="margin-top:8px;"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+      <div style="font-size:12px;color:var(--text2);margin-top:8px;">主責業務平均 ${s.ownAvg != null ? s.ownAvg.toFixed(1) + ' 分' : '尚未評分'}</div>
+    </div>
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;">歷次評核</div>
+      <table class="rot-hist"><thead><tr><th>期別</th><th>本期評分項數</th><th>完成項數</th><th>主責平均</th></tr></thead>
+      <tbody>${hist || `<tr><td colspan="4" style="color:var(--text2)">尚無評核紀錄</td></tr>`}</tbody></table>
+      <div style="margin-top:10px;">${rotLegend()}</div>
+    </div>
+  </div>
+  <div class="rot-lists">
+    ${list('★ 主責業務', own, '目前沒有主責業務')}
+    ${list('✅ 已輪訓（≥' + R.pass + '）', done, '尚無')}
+    ${list('📘 訓練中／接觸過', train, '尚無')}
+    ${list('⬜ 未接觸', none, '全部都接觸過了')}
+  </div>
+  <div class="section-title">全部業務地圖</div>`;
+}
+
+// 業務地圖（卡片）
+function rotMapHtml(focus) {
+  const items = rotFilteredItems();
+  const isAdm = R.role === 'admin';
+  const groups = ROT_GROUPS.filter(g => !R.group || g === R.group);
+  const html = groups.map(g => {
+    const its = items.filter(it => it.group === g);
+    if (!its.length) return '';
+    return `<div class="rot-group"><h4>${g}<span class="badge" style="background:var(--surface2);color:var(--text2);border-radius:10px;padding:1px 8px;font-size:11px;">${its.length}</span></h4>
+      <div class="rot-grid">${its.map(it => {
+        const mine = focus && rotIsOwner(it, focus);
+        let foot = '';
+        if (focus) {
+          const l = rotLatest(it.id, focus, R.period);
+          const c = rotContact(it.id, focus);
+          foot = `<span>${l ? ROT_LEVELS[l.score].label : (c ? '接觸過' : '')}</span>${rotBadge(l)}`;
+        } else if (isAdm) {
+          const ls = R.people.map(p => ({ p, l: rotLatest(it.id, p.name, R.period) }));
+          const can = ls.filter(x => x.l && x.l.score >= R.pass).length;
+          foot = `<span style="${can <= 1 ? 'color:var(--orange);font-weight:600' : ''}">可獨立執行 ${can} / ${R.people.length} 人</span>
+            <span class="rot-dots">${ls.map(({ p, l }) => `<span class="rot-dot ${l ? 'rs' + l.score : ''}" title="${esc(p.name)}：${l ? l.score + ' ' + ROT_LEVELS[l.score].label : '未評'}"></span>`).join('')}</span>`;
+        }
+        return `<div class="rot-card${mine ? ' mine' : ''}" role="button" tabindex="0" onclick="rotOpen('${it.id}')" onkeydown="if(event.key==='Enter')rotOpen('${it.id}')">
+          <div class="top"><span class="gid">${it.id}</span><span class="nm">${esc(it.name)}</span></div>
+          <div class="owners">${it.owners.map(o => rotChip(o)).join('') || '<span class="rot-chip">未指定</span>'}${it.deputies.map(d => rotChip(d, true)).join('')}</div>
+          ${foot ? `<div class="foot">${foot}</div>` : ''}
+        </div>`;
+      }).join('')}</div></div>`;
+  }).join('');
+  return html || `<div class="ov-empty">沒有符合條件的業務</div>`;
+}
+
+// 輪訓矩陣（管理員打分）
+function rotMatrixHtml() {
+  const items = rotFilteredItems();
+  const P = R.people;
+  const groups = ROT_GROUPS.filter(g => !R.group || g === R.group);
+  let rows = '';
+  groups.forEach(g => {
+    const its = items.filter(it => it.group === g);
+    if (!its.length) return;
+    rows += `<tr class="grp"><td colspan="${P.length + 2}">${g}</td></tr>`;
+    its.forEach(it => {
+      const ls = P.map(p => rotLatest(it.id, p.name, R.period));
+      const can = ls.filter(l => l && l.score >= R.pass).length;
+      rows += `<tr><td class="task-info"><div class="task-name" style="cursor:pointer" onclick="rotOpen('${it.id}')"><span style="color:var(--text2);font-size:11px;margin-right:6px;">${it.id}</span>${esc(it.name)}</div>
+        <div class="task-meta">${it.owners.map(esc).join('、') || '未指定'}${it.baseDiff != null ? `・初評難度 ${it.baseDiff}` : ''}</div></td>
+        ${P.map((p, i) => {
+          const l = ls[i], c = rotContact(it.id, p.name), own = rotIsOwner(it, p.name);
+          const cls = `rot-cell ${l ? 'rs' + l.score : 'rsn'}${l && l.carried ? ' rs-carry' : ''}${c ? ' has-contact' : ''}${own && can <= 1 ? ' warn-solo' : ''}`;
+          const tip = `${p.name}｜${l ? `${l.score} ${ROT_LEVELS[l.score].label}${l.carried ? `（沿用 ${l.period}）` : ''}` : '尚未評分'}${c ? `｜接觸：${c}` : ''}${own ? '｜主責' : ''}`;
+          return `<td class="sc"><button class="${cls}" title="${esc(tip)}" onclick="rotOpenPicker(event,'${it.id}','${esc(p.name)}')">${l ? l.score : '—'}${own ? '<span class="own">★</span>' : ''}</button></td>`;
+        }).join('')}
+        <td class="sum" style="${can <= 1 ? 'color:var(--orange);font-weight:700' : ''}">${can} 人</td></tr>`;
+    });
+  });
+  return `<div class="matrix-wrap"><table class="rot-mx"><thead><tr>
+    <th class="task-col">業務大項（${esc(R.period)}）</th>
+    ${P.map(p => `<th style="cursor:pointer" onclick="rotPickPerson('${esc(p.name)}')">${esc(p.name)}</th>`).join('')}
+    <th>≥${R.pass}</th></tr></thead><tbody>${rows || `<tr><td colspan="${P.length + 2}" class="ov-empty">沒有符合條件的業務</td></tr>`}</tbody></table></div>`;
+}
+
+// ── 明細視窗 ────────────────────────────────
+function rotOpen(gid) {
+  const it = R.items.find(x => x.id === gid);
+  if (!it) return;
+  const isAdm = R.role === 'admin';
+  const subs = R.subs.filter(s => s.gid === gid);
+  const showDiff = subs.some(s => s.diff != null || s.help);
+  const visPeople = isAdm ? R.people : R.people.filter(p => p.name === R.me);
+  const hist = name => R.periods.map(per => { const s = _rotIdx[`${per}|${gid}|${name}`]; return s ? `${per}：${s.score}` : ''; }).filter(Boolean).join(' → ');
+  let html = `<h2><span style="color:var(--text2);font-size:13px;margin-right:6px;">${it.id}</span>${esc(it.name)}</h2>
+    <div style="font-size:12px;color:var(--text2);">${esc(it.group)}${it.baseDiff != null ? `・主管初評難度 ${it.baseDiff}` : ''}</div>
+    <div class="rot-sec"><h4>負責人</h4><div class="owners" style="display:flex;gap:4px;flex-wrap:wrap;">${it.owners.map(o => rotChip(o)).join('') || '未指定'}${it.deputies.map(d => rotChip(d, true)).join('')}</div>
+    ${it.note ? `<div style="font-size:12px;color:var(--text2);margin-top:6px;">${esc(it.note)}</div>` : ''}</div>`;
+  html += `<div class="rot-sec"><h4>細項（${subs.length}）</h4>${subs.length ? `<table class="rot-tbl"><thead><tr><th>編號</th><th>業務項目</th><th>負責人</th>${showDiff ? '<th>自評難度</th><th>需要協助</th>' : ''}</tr></thead><tbody>
+    ${subs.map(s => `<tr><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${esc(s.owner)}</td>${showDiff ? `<td>${s.diff != null ? s.diff : '—'}</td><td>${esc(s.help) || '—'}</td>` : ''}</tr>`).join('')}
+    </tbody></table>` : '<div style="font-size:12px;color:var(--text2)">沒有細項</div>'}</div>`;
+  if (visPeople.length) {
+    html += `<div class="rot-sec"><h4>${isAdm ? `輪訓評分（${esc(R.period)}）` : '我的評分'}</h4><table class="rot-tbl"><thead><tr><th>同仁</th><th>目前</th><th>歷次</th><th>接觸紀錄</th>${isAdm ? '<th>本期打分</th><th>備註</th>' : ''}</tr></thead><tbody>
+      ${visPeople.map(p => {
+        const l = rotLatest(gid, p.name, R.period);
+        const own = _rotIdx[`${R.period}|${gid}|${p.name}`];
+        const pn = esc(p.name);
+        return `<tr><td>${pn}${rotIsOwner(it, p.name) ? ' ★' : ''}</td><td>${rotBadge(l)}</td><td style="font-size:11px;color:var(--text2)">${esc(hist(p.name)) || '—'}</td><td style="font-size:11px;color:var(--text2)">${esc(rotContact(gid, p.name)) || '—'}</td>
+          ${isAdm ? `<td><select onchange="rotSave('${gid}','${pn}',this.value,null)"><option value="">未評</option>${ROT_LEVELS.map(lv => `<option value="${lv.v}"${own && own.score === lv.v ? ' selected' : ''}>${lv.v} ${lv.label}</option>`).join('')}</select></td>
+          <td><input value="${esc(own ? own.note : '')}" placeholder="選填" ${own ? '' : 'disabled title="先打分再填備註"'} onchange="rotSave('${gid}','${pn}',null,this.value)" style="width:120px;"></td>` : ''}</tr>`;
+      }).join('')}</tbody></table></div>`;
+  }
+  html += `<div class="modal-actions"><button class="btn btn-default" onclick="rotCloseModal()">關閉</button></div>`;
+  document.getElementById('rot-modal-box').innerHTML = html;
+  document.getElementById('rot-modal').classList.add('active');
+}
+function rotCloseModal() { document.getElementById('rot-modal').classList.remove('active'); }
+
+// ── 打分 ────────────────────────────────────
+function rotOpenPicker(e, gid, name) {
+  e.stopPropagation();
+  if (R.role !== 'admin') return;
+  const it = R.items.find(x => x.id === gid);
+  const cur = _rotIdx[`${R.period}|${gid}|${name}`];
+  const c = rotContact(gid, name);
+  _rotPick = { gid, name };
+  const el = document.getElementById('rot-picker');
+  el.innerHTML = `<div class="picker-title"><b>${esc(name)}</b>｜${esc(it.name)}<br>${esc(R.period)} 評分${c ? `<br>接觸：${esc(c)}` : ''}</div>
+    ${ROT_LEVELS.map(lv => `<div class="picker-opt" onclick="rotPickerSave(${lv.v})"><span class="rs-badge rs${lv.v}">${lv.v}</span>${lv.label}${cur && cur.score === lv.v ? ' ✓' : ''}</div>`).join('')}
+    ${cur ? `<div class="picker-opt" style="color:var(--red)" onclick="rotPickerSave('')">清除本期分數</div>` : ''}`;
+  el.style.display = 'block';
+  const r = e.currentTarget.getBoundingClientRect();
+  const w = el.offsetWidth, h = el.offsetHeight;
+  el.style.left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8)) + 'px';
+  el.style.top  = (r.bottom + h + 8 > window.innerHeight ? Math.max(8, r.top - h - 4) : r.bottom + 4) + 'px';
+}
+function rotClosePicker() { document.getElementById('rot-picker').style.display = 'none'; _rotPick = null; }
+document.addEventListener('click', e => { if (!e.target.closest('#rot-picker')) rotClosePicker(); });
+function rotPickerSave(v) {
+  if (!_rotPick) return;
+  const { gid, name } = _rotPick;
+  rotClosePicker();
+  rotSave(gid, name, String(v), null);
+}
+
+// score：'0'-'4'、''＝清除、null＝不改分數只改備註
+async function rotSave(gid, name, score, note) {
+  if (R.role !== 'admin') return;
+  const key = `${R.period}|${gid}|${name}`;
+  const prev = _rotIdx[key] ? Object.assign({}, _rotIdx[key]) : null;
+  if (score === null && !prev) return;
+  const newScore = score === null ? prev.score : (score === '' ? null : Number(score));
+  // 先更新畫面
+  if (newScore === null) delete _rotIdx[key];
+  else _rotIdx[key] = { period:R.period, gid, name, score:newScore, date: todayStr(), note: note != null ? note : (prev ? prev.note : '') };
+  R.scores = Object.values(_rotIdx);
+  rotRerender(gid);
+  const params = { action:'rotSetScore', period:R.period, gid, name, score: newScore === null ? '' : String(newScore) };
+  if (note != null) params.note = note;
+  try {
+    const r = await apiGet(params);
+    if (!r.ok) throw new Error(r.error);
+    toast(newScore === null ? `已清除 ${name} 的分數` : `${name}：${newScore} 分`);
+  } catch (e) {
+    if (prev) _rotIdx[key] = prev; else delete _rotIdx[key];
+    R.scores = Object.values(_rotIdx);
+    rotRerender(gid);
+    toast(e.message === 'forbidden' ? '登入已逾時，請重新登入' : '儲存失敗：' + e.message, 3500);
+  }
+}
+function rotRerender(gid) {
+  renderRot(true);
+  if (document.getElementById('rot-modal').classList.contains('active')) rotOpen(gid);
+}
+
+async function rotNewPeriod() {
+  if (R.role !== 'admin') return;
+  const v = prompt(`輸入新的評核期別（例如 116上、116下）\n目前期別：${R.cur}`, '');
+  if (v === null) return;
+  const p = v.trim();
+  if (!/^\d{2,3}[上下]$/.test(p)) { toast('格式：民國年＋上/下，例如 116上'); return; }
+  try {
+    const r = await apiGet({ action:'rotSetPeriod', period:p });
+    if (!r.ok) throw new Error(r.error);
+    R.period = p;
+    await rotLoad(); renderRot();
+    toast(`目前期別已設為 ${p}；未重新評分的項目會沿用上一期分數`, 3500);
+  } catch (e) { toast('設定失敗：' + e.message, 3500); }
+}
+
 
 loadAll();
 </script>
