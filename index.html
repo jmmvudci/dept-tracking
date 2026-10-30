@@ -448,7 +448,7 @@ table.rot-tbl select,table.rot-tbl input{padding:4px 6px;border:1px solid var(--
 <div id="tabs">
   <button class="tab-btn active" data-panel="panel-overview" onclick="switchTab(this)">📊 總覽</button>
   <button class="tab-btn" data-panel="panel-matrix" onclick="switchTab(this)">🗂 追蹤矩陣</button>
-  <button class="tab-btn" data-panel="panel-rot" onclick="switchTab(this)">🗺 業務地圖</button>
+  <button class="tab-btn hidden" id="tab-rot" data-panel="panel-rot" onclick="switchTab(this)">🗺 業務地圖</button>
   <button class="tab-btn hidden" id="tab-items" data-panel="panel-items" onclick="switchTab(this)">📝 任務管理</button>
   <button class="tab-btn hidden" id="tab-settings" data-panel="panel-settings" onclick="switchTab(this)">⚙️ 設定</button>
 </div>
@@ -959,6 +959,8 @@ function applyAuth() {
   document.getElementById('tab-items').classList.toggle('hidden', !isAdmin() && !isTaskOnly());
   // 設定頁：僅管理員可見
   document.getElementById('tab-settings').classList.toggle('hidden', !isAdmin());
+  // 業務地圖：上線前只有管理員可見（後端 rotPublic 開關）
+  document.getElementById('tab-rot').classList.toggle('hidden', !(isAdmin() || R.open));
   // 停班停課順延：僅管理員
   document.getElementById('btn-shift').style.display = isAdmin() ? '' : 'none';
   // 延遲率：僅管理員可見
@@ -2159,7 +2161,7 @@ function refreshAll() {
 //   未登入＝只有地圖；同仁＝自己的分數；管理員＝全部＋可打分
 // ══════════════════════════════════════════════
 const R = {
-  loaded:false, err:'', role:'guest', me:null, pass:2,
+  loaded:false, open:false, isPublic:false, err:'', role:'guest', me:null, pass:2,
   cur:'', periods:[], people:[], items:[], subs:[], contacts:[], scores:[],
   period:'', group:'', person:'', q:'', view:'map'
 };
@@ -2182,7 +2184,10 @@ async function rotLoad() {
   try {
     const d = await apiGet({ action:'rotRead' });
     if (!d.ok) throw new Error(d.error || 'load failed');
+    R.open = !!d.open;
+    if (!d.open) { R.loaded = false; R.err = ''; R.role = d.role; return; }
     Object.assign(R, {
+      isPublic: !!d.isPublic,
       loaded:true, err:'', role:d.role, me:d.me, pass:d.passScore,
       cur:d.currentPeriod, periods:d.periods, people:d.people, items:d.items,
       subs:d.subs, contacts:d.contacts, scores:d.scores
@@ -2194,7 +2199,7 @@ async function rotLoad() {
     _rotIdx = {};
     R.scores.forEach(s => { _rotIdx[`${s.period}|${s.gid}|${s.name}`] = s; });
   } catch (e) {
-    R.loaded = false; R.err = e.message;
+    R.loaded = false; R.open = isAdmin(); R.err = e.message;
   }
 }
 
@@ -2307,6 +2312,7 @@ function renderRot(keepFilters) {
     html += `<div class="rot-viewbar"><button class="btn btn-sm btn-default" onclick="rotPickPerson('')">← 全部同仁</button></div>`;
     html += rotProfileHtml(R.person) + rotMapHtml(R.person);
   } else {
+    if (!R.isPublic) html += `<div class="rot-note">🔒 業務地圖目前<b>只有管理員看得到</b>。確認無誤要上線時，在 Google Sheets「系統設定」加一列：<code>rotPublic</code>｜<code>true</code>，重新整理後同仁就看得到（不用重新部署）。</div>`;
     html += rotAdminOverviewHtml();
     html += `<div class="rot-viewbar">
       <div class="due-tabs">
