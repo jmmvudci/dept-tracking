@@ -376,11 +376,16 @@ table.delay-table tr:last-child td{border-bottom:none;}
 .rot-dot{width:12px;height:12px;border-radius:3px;border:1px solid var(--border);}
 .rs-badge{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:22px;padding:0 6px;border-radius:6px;font-size:12px;font-weight:700;}
 .rsn{background:transparent;color:var(--text2);border:1px dashed var(--border);}
-.rs0{background:var(--gray-light);color:var(--gray);}
-.rs1{background:#e0ecff;color:#1e40af;}
-.rs2{background:#a9c8fb;color:#1e3a8a;}
-.rs3{background:#4f86f0;color:#fff;}
-.rs4{background:#1d4ed8;color:#fff;}
+.rs1{background:#f1f5f9;color:#475569;}
+.rs2{background:#e6efff;color:#1e40af;}
+.rs3{background:#d6e5fe;color:#1e40af;}
+.rs4{background:#c3d8fd;color:#1e3a8a;}
+.rs5{background:#a9c7fb;color:#1e3a8a;}
+.rs6{background:#86aff7;color:#0f2a6b;}
+.rs7{background:#5b8ff1;color:#fff;}
+.rs8{background:#3b74e6;color:#fff;}
+.rs9{background:#2559d6;color:#fff;}
+.rs10{background:#1e3a8a;color:#fff;}
 .rs-carry{opacity:.55;}
 .rot-legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--text2);align-items:center;}
 .rot-legend span{display:inline-flex;align-items:center;gap:4px;}
@@ -426,7 +431,7 @@ table.rot-tbl{width:100%;border-collapse:collapse;font-size:12px;}
 table.rot-tbl th,table.rot-tbl td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle;}
 table.rot-tbl th{background:var(--surface2);color:var(--text2);font-weight:600;}
 table.rot-tbl select,table.rot-tbl input{padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;}
-#rot-picker{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px;box-shadow:var(--shadow-md);z-index:250;display:none;min-width:190px;}
+#rot-picker{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px;box-shadow:var(--shadow-md);z-index:250;display:none;min-width:260px;max-width:320px;max-height:80vh;overflow-y:auto;}
 #rot-picker .picker-title{font-size:11px;color:var(--text2);padding:4px 8px 8px;border-bottom:1px solid var(--border);margin-bottom:6px;line-height:1.5;}
 @media(max-width:900px){
   .rot-stats{grid-template-columns:repeat(2,1fr);}
@@ -2176,10 +2181,20 @@ const R = {
   staleDays:183, today:'', people:[], items:[], subs:[], hist:[], scores:[],
   group:'', person:'', q:'', view:'map', openGid:null, form:null
 };
-const ROT_LEVELS = [
-  { v:0, label:'未上手' }, { v:1, label:'需指導' }, { v:2, label:'可獨立執行' },
-  { v:3, label:'可代理' }, { v:4, label:'可教導他人' }
+// 評分 1–10（115/10/30 定案）；ROT_LEVELS[score] 取等級說明
+const ROT_LEVELS = [null,
+  { v:1,  label:'新手',               desc:'剛到職約 3 個月內，需要全程指導' },
+  { v:2,  label:'需部分指導',         desc:'熟悉的步驟能自己做，關鍵環節要人確認' },
+  { v:3,  label:'多數能自行完成',     desc:'大部分步驟能自己做，遇到不熟的地方還需要問' },
+  { v:4,  label:'偶爾需協助',         desc:'幾乎都能自己完成，只有少數環節需要確認' },
+  { v:5,  label:'可獨立執行（需複核）', desc:'能自己完成，但成果還需要主管或同仁檢查' },
+  { v:6,  label:'可獨立執行',         desc:'一般狀況能自己完成，品質穩定，不需要複核' },
+  { v:7,  label:'熟練',               desc:'有效率、少出錯，時程掌握得好' },
+  { v:8,  label:'可處理例外',         desc:'遇到非常規狀況，能自己判斷處理' },
+  { v:9,  label:'可擔任代理人',       desc:'能完整接手這項業務，不用太多交接' },
+  { v:10, label:'可帶新人・改善流程', desc:'能教別人、寫或更新 SOP，主動優化流程' }
 ];
+const ROT_LV = ROT_LEVELS.slice(1);
 const ROT_GROUP_ORDER = ['醫學教育委員會','醫師人員訓練','醫事人員訓練','師資培育','醫學研究','行政與資訊'];
 const ROT_PCOLORS = [
   ['#dbeafe','#1d4ed8'], ['#dcfce7','#166534'], ['#fce7f3','#9d174d'],
@@ -2297,11 +2312,11 @@ function rotChip(name, kind) {
 function rotBadge(s) {
   if (!s) return `<span class="rs-badge rsn" title="尚未評分">—</span>`;
   const lv = ROT_LEVELS[s.score];
-  const tip = `${lv.label}${s.past ? '（曾任時）' : ''}${s.date ? `・${rocDate(s.date)} 評` : ''}`;
+  const tip = `${s.score} ${lv.label}：${lv.desc}${s.past ? '（曾任時）' : ''}${s.date ? `・${rocDate(s.date)} 評` : ''}`;
   return `<span class="rs-badge rs${s.score}${s.past ? ' rs-carry' : ''}" title="${tip}">${s.score}</span>`;
 }
 function rotLegend() {
-  return `<div class="rot-legend">${ROT_LEVELS.map(l => `<span><span class="rs-badge rs${l.v}">${l.v}</span>${l.label}</span>`).join('')}
+  return `<div class="rot-legend">${ROT_LV.map(l => `<span><span class="rs-badge rs${l.v}">${l.v}</span>${l.label}</span>`).join('')}
     ${R.role === 'admin' ? '<span><span class="rs-badge rs2 rs-carry">2</span>淡色＝曾任時的分數</span>' : ''}
     <span>完成門檻 ≥${R.pass}</span></div>`;
 }
@@ -2309,7 +2324,7 @@ function rotYmInput(val, onchange, w) {
   return `<input value="${esc(val || '')}" placeholder="年/月" style="width:${w || 70}px" onchange="${onchange}">`;
 }
 function rotScoreSelect(cur, onchange, emptyLabel) {
-  return `<select onchange="${onchange}"><option value="">${emptyLabel || '未評'}</option>${ROT_LEVELS.map(lv =>
+  return `<select onchange="${onchange}"><option value="">${emptyLabel || '未評'}</option>${ROT_LV.map(lv =>
     `<option value="${lv.v}"${cur === lv.v ? ' selected' : ''}>${lv.v} ${lv.label}</option>`).join('')}</select>`;
 }
 
@@ -2575,11 +2590,11 @@ function rotOpen(gid) {
     const f = R.form;
     if (f && f.type === 'score') {
       html += `<div class="rot-form">為 <b>${esc(f.from)}</b> 新增評分（${rocDate(R.today)}）
-        <select id="rot-f-score"><option value="">選擇分數</option>${ROT_LEVELS.map(lv => `<option value="${lv.v}">${lv.v} ${lv.label}</option>`).join('')}</select>
+        <select id="rot-f-score" onchange="document.getElementById('rot-f-desc').textContent = this.value ? ROT_LEVELS[this.value].desc : ''"><option value="">選擇分數</option>${ROT_LV.map(lv => `<option value="${lv.v}">${lv.v} ${lv.label}</option>`).join('')}</select>
         <input id="rot-f-note" placeholder="備註（選填）" style="width:200px">
         <button class="btn btn-sm btn-primary" onclick="rotSubmitScore()">確定</button>
         <button class="btn btn-sm btn-default" onclick="rotForm(null)">取消</button>
-        <div class="hint">同一天再評一次會取代當天那筆</div></div>`;
+        <div class="hint"><span id="rot-f-desc" style="color:var(--accent)"></span>　同一天再評一次會取代當天那筆</div></div>`;
     } else if (f && (f.type === 'swap' || f.type === 'add')) {
       const choices = others.filter(n => !it.owners.includes(n));
       html += `<div class="rot-form">${f.type === 'swap' ? `由 <b>${esc(f.from)}</b> 換成` : '新增負責人'}
@@ -2732,7 +2747,7 @@ function rotOpenPicker(e, gid, name) {
   _rotPick = { gid, name };
   const el = document.getElementById('rot-picker');
   el.innerHTML = `<div class="picker-title"><b>${esc(name)}</b>｜${esc(it.name)}<br>新增評分（${rocDate(R.today)}）${row && row.from ? `・${esc(row.from)} 起負責` : ''}${l ? `<br>目前 ${l.score} 分（${rocDate(l.date)}）` : ''}</div>
-    ${ROT_LEVELS.map(lv => `<div class="picker-opt" onclick="rotPickerSave(${lv.v})"><span class="rs-badge rs${lv.v}">${lv.v}</span>${lv.label}</div>`).join('')}`;
+    ${ROT_LV.map(lv => `<div class="picker-opt" onclick="rotPickerSave(${lv.v})" title="${lv.desc}"><span class="rs-badge rs${lv.v}">${lv.v}</span><span>${lv.label}<br><span style="font-size:11px;color:var(--text2)">${lv.desc}</span></span></div>`).join('')}`;
   el.style.display = 'block';
   const r = e.currentTarget.getBoundingClientRect();
   const w = el.offsetWidth, h = el.offsetHeight;
