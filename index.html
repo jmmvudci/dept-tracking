@@ -385,15 +385,13 @@ table.delay-table tr:last-child td{border-bottom:none;}
 .rs-badge{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:22px;padding:0 6px;border-radius:6px;font-size:12px;font-weight:700;}
 .rsn{background:transparent;color:var(--text2);border:1px dashed var(--border);}
 .rs1{background:#f1f5f9;color:#475569;}
-.rs2{background:#e6efff;color:#1e40af;}
-.rs3{background:#d6e5fe;color:#1e40af;}
-.rs4{background:#c3d8fd;color:#1e3a8a;}
-.rs5{background:#a9c7fb;color:#1e3a8a;}
-.rs6{background:#86aff7;color:#0f2a6b;}
-.rs7{background:#5b8ff1;color:#fff;}
-.rs8{background:#3b74e6;color:#fff;}
-.rs9{background:#2559d6;color:#fff;}
-.rs10{background:#1e3a8a;color:#fff;}
+.rs2{background:#e3edff;color:#1e40af;}
+.rs3{background:#cfe0fd;color:#1e40af;}
+.rs4{background:#b3cefc;color:#1e3a8a;}
+.rs5{background:#86aff7;color:#0f2a6b;}
+.rs6{background:#4f86f0;color:#fff;}
+.rs7{background:#2a62dd;color:#fff;}
+.rs8{background:#1e3a8a;color:#fff;}
 .rs-carry{opacity:.55;}
 .rot-legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--text2);align-items:center;}
 .rot-legend span{display:inline-flex;align-items:center;gap:4px;}
@@ -2185,24 +2183,23 @@ function refreshAll() {
 //  後端 Rotation.gs 依登入身分回傳：未登入＝地圖；同仁＝自己的；管理員＝全部
 // ══════════════════════════════════════════════
 const R = {
-  loaded:false, open:false, isPublic:false, err:'', role:'guest', me:null, pass:2,
+  loaded:false, open:false, isPublic:false, err:'', role:'guest', me:null, pass:5,
   staleDays:183, today:'', people:[], items:[], subs:[], hist:[], scores:[],
   group:'', person:'', q:'', view:'map', openGid:null, form:null, draft:null, saving:false
 };
-// 評分 1–10（115/10/30 定案）；ROT_LEVELS[score] 取等級說明
+// 評分 1–8（115/11/02 定案；由 10 級合併 4＋5、7＋8）；ROT_LEVELS[score] 取等級說明
 const ROT_LEVELS = [null,
-  { v:1,  label:'新手',               desc:'剛到職約 3 個月內，需要全程指導' },
-  { v:2,  label:'需部分指導',         desc:'熟悉的步驟能自己做，關鍵環節要人確認' },
-  { v:3,  label:'多數能自行完成',     desc:'大部分步驟能自己做，遇到不熟的地方還需要問' },
-  { v:4,  label:'偶爾需協助',         desc:'幾乎都能自己完成，只有少數環節需要確認' },
-  { v:5,  label:'可獨立執行（需複核）', desc:'能自己完成，但成果還需要主管或同仁檢查' },
-  { v:6,  label:'可獨立執行',         desc:'一般狀況能自己完成，品質穩定，不需要複核' },
-  { v:7,  label:'熟練',               desc:'有效率、少出錯，時程掌握得好' },
-  { v:8,  label:'可處理例外',         desc:'遇到非常規狀況，能自己判斷處理' },
-  { v:9,  label:'可擔任代理人',       desc:'能完整接手這項業務，不用太多交接' },
-  { v:10, label:'可帶新人・改善流程', desc:'能教別人、寫或更新 SOP，主動優化流程' }
+  { v:1, label:'新手',                     desc:'剛到職約 3 個月內，需要全程指導' },
+  { v:2, label:'需部分指導',               desc:'熟悉的步驟能自己做，關鍵環節要人確認' },
+  { v:3, label:'多數能自行完成',           desc:'大部分步驟能自己做，遇到不熟的地方還需要問' },
+  { v:4, label:'大致能獨立（需確認或複核）', desc:'幾乎都能自己完成，但少數環節或成果還需要人確認、檢查' },
+  { v:5, label:'可獨立執行',               desc:'一般狀況能自己完成，品質穩定，不需要複核' },
+  { v:6, label:'熟練・可處理例外',         desc:'有效率、少出錯，遇到非常規狀況也能自己判斷處理' },
+  { v:7, label:'可擔任代理人',             desc:'能完整接手這項業務，不用太多交接' },
+  { v:8, label:'可帶新人・改善流程',       desc:'能教別人、寫或更新 SOP，主動優化流程' }
 ];
 const ROT_LV = ROT_LEVELS.slice(1);
+function rotLv(n) { return ROT_LEVELS[n] || { v:n, label:`${n} 分（請執行 8 級換算）`, desc:'' }; }
 const ROT_GROUP_ORDER = ['醫學教育委員會','醫師人員訓練','醫事人員訓練','師資培育','醫學研究','行政與資訊'];
 const ROT_PCOLORS = [
   ['#dbeafe','#1d4ed8'], ['#dcfce7','#166534'], ['#fce7f3','#9d174d'],
@@ -2324,7 +2321,7 @@ function rotChip(name, kind) {
 }
 function rotBadge(s) {
   if (!s) return `<span class="rs-badge rsn" title="尚未評分">—</span>`;
-  const lv = ROT_LEVELS[s.score];
+  const lv = rotLv(s.score);
   const tip = `${s.score} ${lv.label}：${lv.desc}${s.past ? '（曾任時）' : ''}${s.date ? `・${rocDate(s.date)} 評` : ''}`;
   return `<span class="rs-badge rs${s.score}${s.past ? ' rs-carry' : ''}" title="${tip}">${s.score}</span>`;
 }
@@ -2506,7 +2503,7 @@ function rotMapHtml(focus) {
           const ls = R.people.map(p => ({ p, rel: rotRel(it, p.name), s: rotScoreOf(it, p.name) }));
           const can = ls.filter(x => x.s && x.s.score >= R.pass).length;
           foot = `<span style="${can <= 1 ? 'color:var(--orange);font-weight:600' : ''}">熟悉 ${can} 人</span>
-            <span class="rot-dots">${ls.map(({ p, rel, s }) => `<span class="rot-dot ${s ? 'rs' + s.score : ''}${rel === 'past' ? ' rs-carry' : ''}" title="${esc(p.name)}：${rel === 'cur' ? '現任' : rel === 'past' ? '曾任' : '未負責過'}${s ? '・' + s.score + ' ' + ROT_LEVELS[s.score].label : ''}"></span>`).join('')}</span>`;
+            <span class="rot-dots">${ls.map(({ p, rel, s }) => `<span class="rot-dot ${s ? 'rs' + s.score : ''}${rel === 'past' ? ' rs-carry' : ''}" title="${esc(p.name)}：${rel === 'cur' ? '現任' : rel === 'past' ? '曾任' : '未負責過'}${s ? '・' + s.score + ' ' + rotLv(s.score).label : ''}"></span>`).join('')}</span>`;
         }
         return `<div class="rot-card${rel === 'cur' ? ' mine' : ''}" role="button" tabindex="0" onclick="rotOpen('${it.id}')" onkeydown="if(event.key==='Enter')rotOpen('${it.id}')">
           <div class="top"><span class="gid">${it.id}</span><span class="nm">${esc(it.name)}</span></div>
@@ -2536,7 +2533,7 @@ function rotMatrixHtml() {
         ${cells.map(({ p, rel, s, stale }) => {
           if (!rel) return `<td class="sc"></td>`;
           const cls = `rot-cell ${s ? 'rs' + s.score : 'rsn'}${rel === 'past' ? ' rs-carry' : ''}${stale ? ' warn-solo' : ''}`;
-          const tip = `${p.name}｜${rel === 'cur' ? '現任' : '曾任'}｜${s ? `${s.score} ${ROT_LEVELS[s.score].label}${s.date ? `・${rocDate(s.date)} 評` : ''}` : '尚未評分'}${stale ? '｜超過 6 個月沒評分' : ''}`;
+          const tip = `${p.name}｜${rel === 'cur' ? '現任' : '曾任'}｜${s ? `${s.score} ${rotLv(s.score).label}${s.date ? `・${rocDate(s.date)} 評` : ''}` : '尚未評分'}${stale ? '｜超過 6 個月沒評分' : ''}`;
           const click = rel === 'cur' ? `rotOpenPicker(event,'${it.id}','${esc(p.name)}')` : `rotOpen('${it.id}')`;
           return `<td class="sc"><button class="${cls}" title="${esc(tip)}" onclick="${click}">${s ? s.score : '—'}${rel === 'cur' ? '<span class="own">★</span>' : ''}</button></td>`;
         }).join('')}
@@ -2769,7 +2766,7 @@ async function rotSave(extra, msg) {
   if (!err) { if (modalOpen) rotDraftReset(); R.form = null; }
   renderRot(true);
   if (modalOpen) rotOpen(R.openGid);
-  const M = { forbidden:'登入已逾時，請重新登入', 'bad month':'年月格式請用 115/03', 'bad score':'分數要是 1–10', 'already owner':'這個人已經是負責人', 'not current owner':'資料已變動，請重新整理' };
+  const M = { forbidden:'登入已逾時，請重新登入', 'bad month':'年月格式請用 115/03', 'bad score':'分數要是 1–8', 'already owner':'這個人已經是負責人', 'not current owner':'資料已變動，請重新整理' };
   if (err) toast((M[err] || '儲存失敗：' + err) + (r && r.done ? `（前 ${r.done} 項已存）` : ''), 4000);
   else if (msg) toast(msg);
   return !err;
@@ -2777,7 +2774,7 @@ async function rotSave(extra, msg) {
 function rotPickLv(v) {
   document.getElementById('rot-f-score').value = v;
   document.querySelectorAll('.rot-lvtbl tr').forEach(tr => tr.classList.toggle('sel', Number(tr.dataset.v) === v));
-  document.getElementById('rot-f-picked').innerHTML = `已選 <b style="color:var(--accent)">${v} ${ROT_LEVELS[v].label}</b>`;
+  document.getElementById('rot-f-picked').innerHTML = `已選 <b style="color:var(--accent)">${v} ${rotLv(v).label}</b>`;
 }
 function rotPickName() {
   const v = (document.getElementById('rot-f-to') || {}).value || '';
