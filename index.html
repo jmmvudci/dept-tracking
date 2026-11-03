@@ -51,7 +51,7 @@ body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:var(-
 .filter-bar select:focus,.filter-bar input:focus{border-color:var(--accent);}
 
 /* Stats */
-#overview-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+#overview-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:20px;}
 .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);}
 .stat-card .label{font-size:12px;color:var(--text2);margin-bottom:6px;}
 .stat-card .value{font-size:24px;font-weight:700;}
@@ -449,6 +449,27 @@ table.rot-tbl select,table.rot-tbl input{padding:4px 6px;border:1px solid var(--
   .rot-cell{width:44px;height:28px;}
   table.rot-mx td.sc{width:52px;min-width:52px;}
 }
+.swait{background:#ede9fe;color:#6d28d9;}
+.status-btn{position:relative;}
+.status-btn .dl-flag{position:absolute;top:-6px;right:-6px;font-size:10px;line-height:1;background:#fff7ed;color:var(--orange);border:1px solid #fed7aa;border-radius:8px;padding:1px 4px;font-weight:700;}
+.who-chip.swait{background:#ede9fe;color:#6d28d9;}
+.stat-card.clickable.wait:hover,.stat-card.clickable.wait.open{border-color:#7c3aed;}
+.stat-card.clickable.pend:hover,.stat-card.clickable.pend.open{border-color:var(--orange);}
+#picker-extra .px-sec{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:12px;}
+#picker-extra .px-sec label{display:block;color:var(--text2);margin-bottom:4px;font-weight:600;}
+#picker-extra textarea,#picker-extra input{width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;outline:none;margin-bottom:6px;}
+#picker-extra textarea{min-height:56px;resize:vertical;}
+#picker-extra .px-row{display:flex;gap:6px;}
+#picker-extra .px-btn{width:100%;padding:6px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;color:#fff;}
+#picker-extra .px-log{max-height:180px;overflow-y:auto;}
+#picker-extra .px-log div{padding:4px 0;border-bottom:1px dashed var(--border);line-height:1.5;}
+#picker-extra .px-log div:last-child{border-bottom:none;}
+#picker-extra .px-log .t{color:var(--text2);font-size:11px;}
+#status-picker{max-width:300px;max-height:85vh;overflow-y:auto;}
+#status-picker:has(#picker-extra .px-sec){width:280px;}
+.ov-reason{flex:1;min-width:160px;font-size:12px;color:#6d28d9;}
+.ov-approve{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.ov-approve input{padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;}
 </style>
 </head>
 <body>
@@ -664,6 +685,7 @@ table.rot-tbl select,table.rot-tbl input{padding:4px 6px;border:1px solid var(--
 <div id="status-picker">
   <div class="picker-title" id="picker-title"></div>
   <div id="picker-opts"></div>
+  <div id="picker-extra"></div>
   <div id="picker-date-row" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
     <div id="picker-date-label" style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:6px;">📅 管理員：指定實際完成日期</div>
     <input id="picker-date" type="date" onclick="event.stopPropagation()" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;outline:none;margin-bottom:6px;">
@@ -929,21 +951,12 @@ function isTaskOnly() { return !!session('wt_taskonly'); }
 function canFullStatus() { return isAdmin() || isTaskOnly(); }
 function currentUser(){ return session('wt_user') || null; }
 
-// 新增任務專用帳號（帳號=密碼）：只能新增任務，無其他功能
-const TASK_ONLY_ACCOUNTS = ['980857','A80668','B31061','B40465','B50385'];
-
 async function doLogin() {
   const u = document.getElementById('login-user').value.trim();
   const p = document.getElementById('login-pass').value;
   const err = document.getElementById('login-error');
   err.textContent = '';
-  // 新增任務專用帳號（帳號=密碼）
-  if (TASK_ONLY_ACCOUNTS.includes(u) && p === u) {
-    session('wt_taskonly','1'); session('wt_user', u);
-    closeLoginModal(); applyAuth(); toast(`已登入：${u}`); refreshAll();
-    return;
-  }
-  // 管理員與同仁：由後端驗證並發 token（密碼不再下載到瀏覽器）
+  // 管理員、同仁、新增任務專用帳號：都由後端驗證並發 token（密碼不再下載到瀏覽器）
   showLoading(true);
   let r = null;
   try { r = await apiGet({ action:'login', user:u, pass:p, token:'' }); } catch(e) {}
@@ -951,6 +964,7 @@ async function doLogin() {
   if (!r || !r.ok) { err.textContent = r ? '人事號或密碼錯誤' : '無法連線，請稍後再試'; return; }
   session('wt_token', r.token);
   if (r.role === 'admin') { session('wt_admin','1'); session('wt_user','管理員'); }
+  else if (r.role === 'taskonly') { session('wt_taskonly','1'); session('wt_user', r.name); }
   else session('wt_user', r.name);
   closeLoginModal();
   toast(r.role === 'admin' ? '已以管理員身分登入' : `已登入：${r.name}`);
@@ -1003,7 +1017,7 @@ async function apiGet(params) {
 async function loadAll() {
   showLoading(true);
   // 舊版登入（沒有 token）的同仁／管理員 session 一律清掉，請重新登入
-  if (currentUser() && !isTaskOnly() && !session('wt_token')) clearSession();
+  if (currentUser() && !session('wt_token')) clearSession();
   try {
     const d = await apiGet({ action:'read', year: G.year });
     if (d.authOk === false) { clearSession(); toast('登入已逾時，請重新登入', 3500); }
@@ -1054,24 +1068,25 @@ function saveLocal() {
   }));
 }
 
-async function pushStatus(itemId, memberName, val, adminDate) {
+// 寫入狀態（v5）：後端驗證身分、套用規則並記錄歷程，回傳最新紀錄
+// extra：reason（等待資料）、dlDate/dlTime（預計完成）、doneDate（指定完成日）、op:'approve'
+async function pushStatus(itemId, memberName, val, extra) {
   const key = sk(itemId, memberName);
-  const old = G.statusMap[key] || { status:'0', completedAt: null };
-  const now = nowStr();
-  if (val === 'done') {
-    // 管理員有指定日期就用指定的，否則用現在時間
-    old.completedAt = adminDate || now;
-    // 管理員標記完成且未填日期 → 視為準時，不計入延遲率
-    old.byAdmin = isAdmin() && !adminDate;
-  } else {
-    old.completedAt = null;
-    old.byAdmin = false;
+  const params = Object.assign({ action:'setStatus', key }, val ? { status: val } : {}, extra || {});
+  try {
+    const r = await apiGet(params);
+    if (!r || !r.ok) throw new Error(r ? r.error : '連線失敗');
+    G.statusMap[key] = r.entry;
+    saveLocal();
+    return true;
+  } catch (e) {
+    const M = { forbidden:'登入已逾時或沒有權限，請重新登入', 'status not allowed':'你沒有權限設定這個狀態',
+      'reason required':'請填寫等待的原因', 'expected date required':'請填寫預計完成日期與時間',
+      'expected date in past':'預計完成時間不能早於現在', 'nothing to approve':'這筆沒有待核准的期限（可能已被核准）',
+      'not assigned':'這筆任務沒有指派給這位同仁', outdated:'系統已更新，請重新整理頁面' };
+    toast(M[e.message] || '儲存失敗：' + e.message, 4000);
+    return false;
   }
-  old.status = val;
-  G.statusMap[key] = old;
-  saveLocal();
-  try { await apiGet({ action:'updateStatus', key, value: JSON.stringify(old) }); }
-  catch(e) { toast('狀態已暫存（離線）'); }
 }
 
 // ══════════════════════════════════════════════
@@ -1083,18 +1098,30 @@ function getEntry(itemId, memberName) {
   return G.statusMap[sk(itemId, memberName)] || { status:'0', completedAt: null };
 }
 
+// 這位同仁這筆任務的有效期限：有個人期限（等待資料後提出／核准）就用個人的，否則用任務截止日
+function effDeadline(itemId, memberName, deadline, deadtime) {
+  const e = getEntry(itemId, memberName);
+  if (e.dl && e.dl.date) return { date: e.dl.date, time: e.dl.time || '17:00', personal: true, pending: e.dl.state === 'pending' };
+  return { date: deadline, time: deadtime, personal: false, pending: false };
+}
+// 等待資料累計天數
+function waitDays(entry) {
+  return (entry.waits || []).reduce((n, w) => {
+    const a = new Date(w.from), b = w.to ? new Date(w.to) : new Date();
+    return n + Math.max(0, (b - a) / 86400000);
+  }, 0);
+}
 // deadline format: 'yyyy-MM-dd' or 'yyyy-MM-ddTHH:mm'
 function getEffStatus(itemId, memberName, deadline, deadtime) {
   const e   = getEntry(itemId, memberName);
   const s   = e.status;
-  if (!deadline) return s;
-
-  // Build deadline datetime string for comparison
-  const deadDT = deadtime ? `${deadline}T${deadtime}` : `${deadline}T23:59`;
+  if (s === 'wait') return 'wait';                 // 等待資料：不算逾期
+  const dl  = effDeadline(itemId, memberName, deadline, deadtime);
+  if (!dl.date) return s;
+  const deadDT = dl.time ? `${dl.date}T${dl.time}` : `${dl.date}T23:59`;
   const nowDT  = nowStr();
-
   if (s === '0' && nowDT > deadDT) return 'overdue';
-  if (s === 'done' && e.byAdmin) return 'done';  // 管理員未填日期標記完成：一律準時
+  if (s === 'done' && (e.byAdmin || e.fromWait)) return 'done';  // 管理員未填日期／資料到後直接完成：準時
   if (s === 'done' && e.completedAt && e.completedAt > deadDT) return 'late';
   return s;
 }
@@ -1141,25 +1168,39 @@ function renderOverview() {
     : visibleMembers();
 
   // 統計口徑：任務總數 = 任務筆數；已完成 / 逾期 = 人次（一筆任務 3 位負責人算 3 人次）
-  let done=0, overdue=0, pairs=0;
+  let done=0, overdue=0, pairs=0, waiting=0, pending=0;
   visibleMembers().forEach(m => G.items.forEach(it => {
     if (!it.members.includes(m.name)) return;
     pairs++;
     const e = getEffStatus(it.id, m.name, it.deadline, it.deadtime);
     if (e==='done'||e==='late') done++;
     if (e==='overdue') overdue++;
+    if (e==='wait') waiting++;
+    const en = getEntry(it.id, m.name);
+    if (en.dl && en.dl.state === 'pending' && en.status !== 'wait') pending++;
   }));
 
   document.getElementById('overview-stats').innerHTML = `
     <div class="stat-card"><div class="label">任務總數</div><div class="value">${visibleItems().length}<small>項</small></div><div class="sub">共 ${pairs} 人次</div></div>
-    <div class="stat-card"><div class="label">成員人數</div><div class="value">${visibleMembers().length}<small>人</small></div></div>
+    <div class="stat-card clickable wait ${_ovPanel==='wait'?'open':''}" role="button" tabindex="0"
+         onclick="toggleOvPanel('wait')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleOvPanel('wait');}">
+      <div class="label" style="color:#6d28d9">等待資料</div>
+      <div class="value" style="color:#6d28d9">${waiting}<small>人次</small></div>
+      <div class="sub">${waiting ? (_ovPanel==='wait' ? '收合名單 ▴' : '點選查看在等什麼 ▾') : '目前沒有卡住的任務'}</div>
+    </div>
     <div class="stat-card"><div class="label" style="color:var(--green)">已完成</div><div class="value" style="color:var(--green)">${done}<small>人次</small></div></div>
-    <div class="stat-card clickable ${_overdueOpen?'open':''}" role="button" tabindex="0"
-         onclick="toggleOverdue()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleOverdue();}">
+    <div class="stat-card clickable ${_ovPanel==='overdue'?'open':''}" role="button" tabindex="0"
+         onclick="toggleOvPanel('overdue')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleOvPanel('overdue');}">
       <div class="label" style="color:var(--red)">逾期未完成</div>
       <div class="value" style="color:var(--red)">${overdue}<small>人次</small></div>
-      <div class="sub">${overdue ? (_overdueOpen ? '收合名單 ▴' : '點選查看名單 ▾') : '目前沒有逾期'}</div>
+      <div class="sub">${overdue ? (_ovPanel==='overdue' ? '收合名單 ▴' : '點選查看名單 ▾') : '目前沒有逾期'}</div>
     </div>
+    ${isAdmin() ? `<div class="stat-card clickable pend ${_ovPanel==='pending'?'open':''}" role="button" tabindex="0"
+         onclick="toggleOvPanel('pending')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleOvPanel('pending');}">
+      <div class="label" style="color:var(--orange)">期限待審核</div>
+      <div class="value" style="color:var(--orange)">${pending}<small>筆</small></div>
+      <div class="sub">${pending ? (_ovPanel==='pending' ? '收合 ▴' : '點選審核 ▾') : '沒有待審核的期限'}</div>
+    </div>` : ''}
   `;
   renderOverduePanel();
   renderDueSection(fp);
@@ -1205,7 +1246,7 @@ function renderDelayTable() {
       const eff = getEffStatus(it.id, memberName, it.deadline, it.deadtime);
       if (eff === 'overdue' || eff === 'late') {
         delayed++;
-        delayedItems.push({ name: it.name, type: it.type, eff });
+        delayedItems.push({ name: it.name, type: it.type, eff, wd: waitDays(getEntry(it.id, memberName)) });
       }
     });
     return { delayed, total: withDl.length, rate: (delayed/withDl.length*100).toFixed(1), delayedItems };
@@ -1232,7 +1273,7 @@ function renderDelayTable() {
       ? `<div style="margin-top:4px;font-size:11px;color:var(--text2);">${
           dl.delayedItems.map(i => {
             const effLabel = i.eff === 'overdue' ? '⏰逾期未完成' : '⚠️晚交';
-            return `${i.name}（${typeLabel[i.type]||i.type}）${effLabel}`;
+            return `${i.name}（${typeLabel[i.type]||i.type}）${effLabel}${i.wd >= 0.5 ? `・曾等待資料 ${Math.round(i.wd)} 天` : ''}`;
           }).join('、')
         }</div>` : '';
     return `<tr>
@@ -1253,7 +1294,7 @@ function renderDelayTable() {
 // ══════════════════════════════════════════════
 //  逾期清單 / 本週下週到期
 // ══════════════════════════════════════════════
-let _overdueOpen = false;
+let _ovPanel = null;   // 'overdue' | 'wait' | 'pending'
 let _dueTab = 'this';
 let _dueHideDone = false;
 
@@ -1269,7 +1310,9 @@ function typeTag(type) {
 function whoChip(it, name) {
   const eff = getEffStatus(it.id, name, it.deadline, it.deadtime);
   const { label, cls } = statusDisplay(eff);
-  return `<span class="who-chip ${cls}">${name}・${label}</span>`;
+  const dl = effDeadline(it.id, name, it.deadline, it.deadtime);
+  const extra = dl.personal && eff !== 'done' && eff !== 'late' ? `（新期限 ${dl.date.slice(5).replace('-','/')}${dl.pending ? ' 待核' : ''}）` : '';
+  return `<span class="who-chip ${cls}">${name}・${label}${extra}</span>`;
 }
 // 週一 ~ 週日
 function weekRange(offset) {
@@ -1281,41 +1324,86 @@ function weekRange(offset) {
   return { start, end: dateStr(d) };
 }
 
-function toggleOverdue() {
-  _overdueOpen = !_overdueOpen;
+function toggleOvPanel(kind) {
+  _ovPanel = _ovPanel === kind ? null : kind;
   renderOverview();
-  if (_overdueOpen) document.getElementById('overdue-panel').scrollIntoView({ behavior:'smooth', block:'nearest' });
+  if (_ovPanel) document.getElementById('overdue-panel').scrollIntoView({ behavior:'smooth', block:'nearest' });
 }
+function toggleOverdue() { toggleOvPanel('overdue'); }
+const fmtMD = ds => { const d = parseLocalDate(ds); return `${d.getMonth()+1}/${d.getDate()}`; };
 
 function renderOverduePanel() {
   const el = document.getElementById('overdue-panel');
-  if (!_overdueOpen) { el.style.display = 'none'; return; }
+  if (!_ovPanel || (_ovPanel === 'pending' && !isAdmin())) { el.style.display = 'none'; return; }
   const names = new Set(visibleMembers().map(m => m.name));
   const now = new Date();
   const rows = [];
   G.items.forEach(it => it.members.forEach(n => {
     if (!names.has(n)) return;
-    if (getEffStatus(it.id, n, it.deadline, it.deadtime) !== 'overdue') return;
-    const dead = new Date(`${it.deadline}T${it.deadtime||'23:59'}`);
-    rows.push({ it, n, days: Math.max(1, Math.ceil((now - dead) / 86400000)) });
+    const eff = getEffStatus(it.id, n, it.deadline, it.deadtime);
+    const en = getEntry(it.id, n);
+    const dl = effDeadline(it.id, n, it.deadline, it.deadtime);
+    if (_ovPanel === 'overdue' && eff === 'overdue') {
+      const dead = new Date(`${dl.date}T${dl.time||'23:59'}`);
+      rows.push({ it, n, en, dl, days: Math.max(1, Math.ceil((now - dead) / 86400000)) });
+    }
+    if (_ovPanel === 'wait' && eff === 'wait') {
+      const w = (en.waits || [])[en.waits.length - 1];
+      rows.push({ it, n, en, dl, since: w ? w.from : '', days: w ? Math.max(0, Math.floor((now - new Date(w.from)) / 86400000)) : 0 });
+    }
+    if (_ovPanel === 'pending' && en.dl && en.dl.state === 'pending' && en.status !== 'wait') {
+      rows.push({ it, n, en, dl, days: Math.round(waitDays(en)) });
+    }
   }));
   rows.sort((a,b) => b.days - a.days || a.n.localeCompare(b.n));
-
-  el.style.display = '';
-  el.innerHTML = `<div class="ov-panel" style="border-color:#fecaca;">
-    <div class="ov-panel-head" style="background:var(--red-light);">
-      <h4 style="color:var(--red)">⏰ 逾期未完成名單（${rows.length} 人次）</h4>
-      <span style="font-size:11px;color:var(--text2)">點選任一筆可跳到追蹤矩陣</span>
-      <button class="btn btn-sm btn-default" onclick="toggleOverdue()">收合</button>
-    </div>
-    ${rows.length ? rows.map(r => `
+  const conf = {
+    overdue: { color:'var(--red)', bg:'var(--red-light)', border:'#fecaca', title:`⏰ 逾期未完成名單（${rows.length} 人次）`, empty:'目前沒有逾期未完成的任務' },
+    wait:    { color:'#6d28d9', bg:'#f5f3ff', border:'#ddd6fe', title:`⏸ 等待資料（${rows.length} 人次）`, empty:'目前沒有等待資料的任務' },
+    pending: { color:'var(--orange)', bg:'var(--orange-light)', border:'#fed7aa', title:`🗓 期限待審核（${rows.length} 筆）`, empty:'沒有待審核的期限' }
+  }[_ovPanel];
+  const rowHtml = r => {
+    if (_ovPanel === 'overdue') return `
       <div class="ov-row" onclick="gotoMatrix('${r.n}','${r.it.id}')">
-        <span class="ov-date">${fmtDue(r.it)}</span>
+        <span class="ov-date">${r.dl.personal ? `新期限 ${fmtMD(r.dl.date)} ${r.dl.time}` : fmtDue(r.it)}</span>
         <span class="ov-task">${r.it.name}<br>${typeTag(r.it.type)}</span>
         <span class="who-chip soverdue">👤 ${r.n}</span>
         <span class="ov-late-days">逾期 ${r.days} 天</span>
-      </div>`).join('') : '<div class="ov-empty">目前沒有逾期未完成的任務</div>'}
+      </div>`;
+    if (_ovPanel === 'wait') return `
+      <div class="ov-row" onclick="gotoMatrix('${r.n}','${r.it.id}')">
+        <span class="ov-date">${fmtDue(r.it)}</span>
+        <span class="ov-task">${r.it.name}<br>${typeTag(r.it.type)}</span>
+        <span class="who-chip swait">👤 ${r.n}</span>
+        <span class="ov-reason">⏸ ${esc(r.en.waitReason || '')}<br><span style="color:var(--text2)">${r.since ? `${fmtMD(r.since.slice(0,10))} 起・已等 ${r.days} 天` : ''}</span></span>
+      </div>`;
+    const id = `${r.it.id}__${r.n}`.replace(/[^\w]/g, '_');
+    return `
+      <div class="ov-row" style="cursor:default">
+        <span class="ov-date">原期限 ${fmtDue(r.it)}</span>
+        <span class="ov-task">${r.it.name}<br>${typeTag(r.it.type)}${r.days ? `<span style="font-size:11px;color:#6d28d9;margin-left:6px">曾等待 ${r.days} 天</span>` : ''}</span>
+        <span class="who-chip s0">👤 ${r.n}</span>
+        <span class="ov-approve">提出：<input type="date" id="ap-d-${id}" value="${r.dl.date}"><input type="time" id="ap-t-${id}" value="${r.dl.time}" style="width:96px">
+          <button class="btn btn-sm btn-primary" onclick="approveDl('${r.it.id}','${r.n}','${id}')">核准</button></span>
+      </div>`;
+  };
+  el.style.display = '';
+  el.innerHTML = `<div class="ov-panel" style="border-color:${conf.border};">
+    <div class="ov-panel-head" style="background:${conf.bg};">
+      <h4 style="color:${conf.color}">${conf.title}</h4>
+      <span style="font-size:11px;color:var(--text2)">${_ovPanel === 'pending' ? '日期可先修改再按核准' : '點選任一筆可跳到追蹤矩陣'}</span>
+      <button class="btn btn-sm btn-default" onclick="toggleOvPanel('${_ovPanel}')">收合</button>
+    </div>
+    ${rows.length ? rows.map(rowHtml).join('') : `<div class="ov-empty">${conf.empty}</div>`}
   </div>`;
+}
+
+async function approveDl(itemId, memberName, id) {
+  const d = document.getElementById('ap-d-' + id).value, t = document.getElementById('ap-t-' + id).value;
+  if (!d || !t) { toast('請填日期與時間'); return; }
+  if (await pushStatus(itemId, memberName, null, { op:'approve', dlDate:d, dlTime:t })) {
+    toast(`已核准 ${memberName} 的新期限 ${d} ${t}`);
+    renderOverview(); renderMatrix();
+  }
 }
 
 function renderDueSection(fp) {
@@ -1323,7 +1411,9 @@ function renderDueSection(fp) {
   const today = todayStr();
   const pick = offset => {
     const { start, end } = weekRange(offset);
-    let list = visibleItems().filter(it => it.deadline && it.deadline >= start && it.deadline <= end);
+    const inRange = d => d && d >= start && d <= end;
+    let list = visibleItems().filter(it => inRange(it.deadline) ||
+      it.members.some(n => names.has(n) && inRange(effDeadline(it.id, n, it.deadline, it.deadtime).date)));
     if (fp) list = list.filter(it => it.members.includes(fp));
     list.sort((a,b) => (a.deadline + (a.deadtime||'')).localeCompare(b.deadline + (b.deadtime||'')));
     return { start, end, list };
@@ -1487,7 +1577,12 @@ function renderItemRow(it, members, indent) {
     const canEdit = isAdmin() || isTaskOnly() || currentUser()===m.name;
     const click = canEdit
       ? `onclick="openPicker(event,'${it.id}','${m.name}','${it.deadline||''}','${it.deadtime||''}')"` : '';
-    html += `<td class="status-cell"><button class="status-btn ${cls}" ${click}>${label}</button></td>`;
+    const ent = getEntry(it.id, m.name);
+    const dl = effDeadline(it.id, m.name, it.deadline, it.deadtime);
+    const tip = ent.status === 'wait' ? `等待資料：${ent.waitReason||''}`
+      : dl.personal ? `個人期限 ${dl.date} ${dl.time}${dl.pending ? '（待主管核准）' : ''}` : '';
+    const flag = dl.pending && ent.status !== 'wait' ? '<span class="dl-flag">待核</span>' : (dl.personal && ent.status !== 'wait' ? '<span class="dl-flag" style="background:#eff4ff;color:var(--accent);border-color:#bfdbfe">新期</span>' : '');
+    html += `<td class="status-cell"><button class="status-btn ${cls}" ${click} title="${tip.replace(/"/g,'&quot;')}">${label}${flag}</button></td>`;
   });
   html += '</tr>';
   return html;
@@ -1501,6 +1596,7 @@ function statusDisplay(eff) {
     'overdue':{label:'逾期',   cls:'soverdue'},
     '3':      {label:'待確認', cls:'s3'},
     'na':     {label:'N/A',   cls:'s0'},
+    'wait':   {label:'等待資料', cls:'swait'},
   })[eff] || {label:eff, cls:'s0'};
 }
 
@@ -1509,18 +1605,25 @@ function statusDisplay(eff) {
 // ══════════════════════════════════════════════
 let _pickerCtx = null;
 
+const STATUS_ALLOWED_UI = {
+  member:   ['0','done','wait'],
+  taskonly: ['0','done','wait','na'],
+  admin:    ['0','done','3','wait','na']
+};
+function myRole() { return isAdmin() ? 'admin' : isTaskOnly() ? 'taskonly' : 'member'; }
+
 function openPicker(e, itemId, memberName, deadline, deadtime) {
   e.stopPropagation();
   _pickerCtx = { itemId, memberName, deadline, deadtime };
   const allOpts = [
-    {val:'0',    label:'待辦',   color:'#9ca3af'},
-    {val:'done', label:'已完成', color:'#16a34a'},
-    {val:'3',    label:'待確認', color:'#d97706'},
-    {val:'na',   label:'N/A',   color:'#6b7280'},
+    {val:'0',    label:'待辦',     color:'#9ca3af'},
+    {val:'done', label:'已完成',   color:'#16a34a'},
+    {val:'wait', label:'等待資料', color:'#7c3aed'},
+    {val:'3',    label:'待確認',   color:'#d97706'},
+    {val:'na',   label:'N/A',     color:'#6b7280'},
   ];
-  // 一般成員只能選「待辦」和「已完成」
-  // 管理員與 5 組專用帳號可選全部狀態
-  const opts = canFullStatus() ? allOpts : allOpts.filter(o => o.val === '0' || o.val === 'done');
+  // 同仁：待辦／已完成／等待資料；專用帳號另可 N/A；待確認與核准限管理員
+  const opts = allOpts.filter(o => STATUS_ALLOWED_UI[myRole()].includes(o.val));
   // 日期欄說明依身分顯示
   document.getElementById('picker-date-label').textContent =
     isAdmin() ? '📅 管理員：指定實際完成日期' : '📅 指定實際完成日期';
@@ -1528,11 +1631,14 @@ function openPicker(e, itemId, memberName, deadline, deadtime) {
     ? '留空 = 視為準時完成（不計入延遲率）<br>填日期 = 截止日當天以前算準時，之後算晚交'
     : '留空 = 以現在時間記錄<br>填日期 = 截止日當天以前算準時，之後算晚交';
   document.getElementById('picker-date').max = todayStr();   // 不能選未來日期
-  document.getElementById('picker-title').textContent = memberName;
+  const ent = getEntry(itemId, memberName);
+  const dl = effDeadline(itemId, memberName, deadline, deadtime);
+  document.getElementById('picker-title').innerHTML = `${esc(memberName)}${dl.personal ? `<br><span style="color:${dl.pending ? 'var(--orange)' : 'var(--accent)'}">個人期限 ${dl.date} ${dl.time}${dl.pending ? '（待核准）' : ''}</span>` : ''}${ent.status === 'wait' ? `<br><span style="color:#6d28d9">⏸ 等待：${esc(ent.waitReason || '')}</span>` : ''}`;
   document.getElementById('picker-opts').innerHTML = opts.map(o =>
     `<div class="picker-opt" onclick="selectStatus('${o.val}')">
-      <span class="picker-dot" style="background:${o.color}"></span>${o.label}
+      <span class="picker-dot" style="background:${o.color}"></span>${o.label}${ent.status === o.val ? ' ✓' : ''}
     </div>`).join('');
+  renderPickerExtra(null);
 
   // 管理員才顯示日期輸入欄（預設隱藏，點已完成後才展開）
   const dateRow = document.getElementById('picker-date-row');
@@ -1572,7 +1678,11 @@ function openPicker(e, itemId, memberName, deadline, deadtime) {
 
 async function selectStatus(val) {
   // 管理員點「已完成」→ 不立即關閉，顯示日期確認欄並重新定位
+  const ent = getEntry(_pickerCtx.itemId, _pickerCtx.memberName);
+  if (val === 'wait') { renderPickerExtra('wait'); return; }
+  if (val === '0' && ent.status === 'wait') { renderPickerExtra('resume'); return; }
   if (canFullStatus() && val === 'done') {
+    renderPickerExtra(null);
     const pk = document.getElementById('status-picker');
     document.getElementById('picker-date-row').style.display = 'block';
     document.getElementById('picker-date').value = '';
@@ -1600,17 +1710,83 @@ async function selectStatus(val) {
   }
   document.getElementById('status-picker').style.display = 'none';
   if (!_pickerCtx) return;
-  await pushStatus(_pickerCtx.itemId, _pickerCtx.memberName, val, null);
-  renderMatrix(); renderOverview(); toast('狀態已更新');
+  if (await pushStatus(_pickerCtx.itemId, _pickerCtx.memberName, val, null)) {
+    renderMatrix(); renderOverview(); toast(ent.status === 'wait' && val === 'done' ? '已完成（資料到後直接完成，算準時）' : '狀態已更新');
+  }
+}
+
+// picker 下方的表單：等待原因／預計完成／主管核准／歷程
+function renderPickerExtra(mode) {
+  const el = document.getElementById('picker-extra');
+  if (!_pickerCtx) { el.innerHTML = ''; return; }
+  const { itemId, memberName, deadline, deadtime } = _pickerCtx;
+  const ent = getEntry(itemId, memberName);
+  const dl = effDeadline(itemId, memberName, deadline, deadtime);
+  let h = '';
+  if (mode === 'wait') {
+    h += `<div class="px-sec"><label>⏸ 等待什麼資料／訊息？（必填）</label>
+      <textarea id="px-reason" placeholder="例：等內科部回傳名單">${esc(ent.status === 'wait' ? (ent.waitReason || '') : '')}</textarea>
+      <button class="px-btn" style="background:#7c3aed" onclick="event.stopPropagation();submitWait()">確認等待資料</button>
+      <div style="color:var(--text2);margin-top:4px">等待期間不算逾期；資料到後改回待辦，要填預計完成時間給主管核准</div></div>`;
+  } else if (mode === 'resume') {
+    const d0 = todayStr();
+    h += `<div class="px-sec"><label>📅 資料已到，預計什麼時候完成？（必填）</label>
+      <div class="px-row"><input type="date" id="px-d" min="${d0}" value=""><input type="time" id="px-t" value="17:00" style="width:100px"></div>
+      <button class="px-btn" style="background:var(--accent)" onclick="event.stopPropagation();submitResume()">改回待辦</button>
+      <div style="color:var(--text2);margin-top:4px">${isAdmin() ? '管理員設定的期限直接生效' : '送出後需主管核准；核准前先以你填的時間計算'}，延遲率改從這個期限起算</div></div>`;
+  }
+  if (isAdmin() && ent.dl && ent.dl.state === 'pending' && ent.status !== 'wait' && !mode) {
+    h += `<div class="px-sec"><label style="color:var(--orange)">🗓 待核准的新期限</label>
+      <div class="px-row"><input type="date" id="px-ad" value="${ent.dl.date}"><input type="time" id="px-at" value="${ent.dl.time}" style="width:100px"></div>
+      <button class="px-btn" style="background:var(--orange)" onclick="event.stopPropagation();submitApprove()">核准（可先修改日期）</button></div>`;
+  }
+  const canSeeLog = isAdmin() || isTaskOnly() || currentUser() === memberName;
+  if (canSeeLog && ent.log && ent.log.length && !mode) {
+    h += `<div class="px-sec"><label>📜 歷程（${ent.log.length}）</label><div class="px-log">${ent.log.slice().reverse().map(x =>
+      `<div><span class="t">${x.t.replace('T',' ')}・${esc(x.by)}</span><br>${esc(x.text)}</div>`).join('')}</div></div>`;
+  }
+  el.innerHTML = h;
+  el.onclick = ev => ev.stopPropagation();
+  const pk = document.getElementById('status-picker');
+  requestAnimationFrame(() => {
+    const pkH = pk.offsetHeight, pkW = pk.offsetWidth, curTop = parseFloat(pk.style.top) || 0, curLeft = parseFloat(pk.style.left) || 0;
+    if (curTop + pkH > window.innerHeight - 16) pk.style.top = Math.max(8, window.innerHeight - pkH - 16) + 'px';
+    if (curLeft + pkW > window.innerWidth - 8) pk.style.left = Math.max(8, window.innerWidth - pkW - 8) + 'px';
+    const f = document.getElementById(mode === 'wait' ? 'px-reason' : 'px-d');
+    if (f) f.focus();
+  });
+}
+async function submitWait() {
+  const reason = document.getElementById('px-reason').value.trim();
+  if (!reason) { toast('請填寫等待的原因'); return; }
+  document.getElementById('status-picker').style.display = 'none';
+  if (await pushStatus(_pickerCtx.itemId, _pickerCtx.memberName, 'wait', { reason })) {
+    renderMatrix(); renderOverview(); toast('已設為等待資料');
+  }
+}
+async function submitResume() {
+  const d = document.getElementById('px-d').value, t = document.getElementById('px-t').value;
+  if (!d || !t) { toast('請填寫預計完成日期與時間'); return; }
+  if (`${d}T${t}` < nowStr()) { toast('預計完成時間不能早於現在'); return; }
+  document.getElementById('status-picker').style.display = 'none';
+  if (await pushStatus(_pickerCtx.itemId, _pickerCtx.memberName, '0', { dlDate:d, dlTime:t })) {
+    renderMatrix(); renderOverview(); toast(isAdmin() ? `已改回待辦，新期限 ${d} ${t}` : `已改回待辦，預計 ${d} ${t} 完成，等待主管核准`);
+  }
+}
+async function submitApprove() {
+  const d = document.getElementById('px-ad').value, t = document.getElementById('px-at').value;
+  document.getElementById('status-picker').style.display = 'none';
+  if (await pushStatus(_pickerCtx.itemId, _pickerCtx.memberName, null, { op:'approve', dlDate:d, dlTime:t })) {
+    renderMatrix(); renderOverview(); toast(`已核准新期限 ${d} ${t}`);
+  }
 }
 
 async function confirmDone() {
   document.getElementById('status-picker').style.display = 'none';
   if (!_pickerCtx) return;
   const d = document.getElementById('picker-date').value;
-  // 只選日期沒有時間：選今天＝按下去的那一刻；選過去某天＝當天開始（截止日當天以前都算準時）
-  const adminDate = !d ? null : (d === todayStr() ? nowStr() : d + 'T00:00');
-  await pushStatus(_pickerCtx.itemId, _pickerCtx.memberName, 'done', adminDate);
+  // 只選日期沒有時間：後端處理（選今天＝現在；選過去某天＝當天開始，截止日當天以前都算準時）
+  if (!(await pushStatus(_pickerCtx.itemId, _pickerCtx.memberName, 'done', d ? { doneDate:d } : null))) return;
   renderMatrix(); renderOverview();
   toast(d ? `完成日期設為 ${d}` : (isAdmin() ? '已標記完成（視為準時）' : '已標記完成'));
 }
@@ -1626,7 +1802,7 @@ document.addEventListener('scroll', (e) => {
   const pk = document.getElementById('status-picker');
   if (pk.style.display === 'none' || pk.contains(e.target)) return;
   // 管理員正在輸入完成日期時不關閉（手機鍵盤彈出會觸發捲動）
-  if (document.activeElement === document.getElementById('picker-date')) return;
+  if (pk.contains(document.activeElement)) return;
   pk.style.display = 'none';
 }, true);
 
@@ -1731,8 +1907,8 @@ async function saveItem() {
   }
 
   closeModal(); saveLocal();
-  try { await apiGet({ action:'writeItem', item: JSON.stringify(item) }); toast('任務已儲存'); }
-  catch(e) { toast('任務已暫存（離線）'); }
+  try { const r = await apiGet({ action:'writeItem', item: JSON.stringify(item) }); if (r && r.ok === false) throw new Error(r.error); toast('任務已儲存'); }
+  catch(e) { toast(e.message === 'forbidden' ? '沒有權限或登入逾時，請重新登入' : '儲存失敗：' + e.message, 4000); }
   renderItems(); renderMatrix(); renderOverview();
 }
 
@@ -1741,8 +1917,8 @@ async function deleteItem(id) {
   if (!confirm('確定要刪除這項任務？')) return;
   G.items = G.items.filter(x=>x.id!==id);
   saveLocal();
-  try { await apiGet({ action:'deleteItem', id }); toast('任務已刪除'); }
-  catch(e) { toast('刪除已暫存（離線）'); }
+  try { const r = await apiGet({ action:'deleteItem', id }); if (r && r.ok === false) throw new Error(r.error); toast('任務已刪除'); }
+  catch(e) { toast(e.message === 'forbidden' ? '沒有權限或登入逾時，請重新登入' : '刪除失敗：' + e.message, 4000); }
   renderItems(); renderMatrix(); renderOverview();
 }
 
@@ -1818,11 +1994,12 @@ async function saveMeetingTasks() {
   saveLocal();
   try {
     for (const t of tasks) {
-      await apiGet({ action:'writeItem', item: JSON.stringify(t) });
+      const r = await apiGet({ action:'writeItem', item: JSON.stringify(t) });
+      if (r && r.ok === false) throw new Error(r.error);
     }
     toast(`已建立「${name}」三筆任務`);
   } catch(e) {
-    toast('任務已暫存（離線）');
+    toast(e.message === 'forbidden' ? '沒有權限或登入逾時，請重新登入' : '儲存失敗：' + e.message, 4000);
   }
   renderItems(); renderMatrix(); renderOverview();
 }
