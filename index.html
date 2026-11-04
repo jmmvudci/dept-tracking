@@ -361,7 +361,7 @@ table.delay-table tr:last-child td{border-bottom:none;}
 .rot-lvtbl tr.pass td{border-top:2px dashed var(--accent);}
 .rot-lvtbl .lv-now{font-size:10px;font-weight:600;color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:0 5px;margin-left:4px;}
 .rot-note{background:var(--accent-light);color:var(--accent);border-radius:var(--radius);padding:10px 14px;font-size:13px;margin-bottom:16px;}
-.rot-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.rot-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:20px;}
 .rot-people{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-bottom:24px;}
 .rot-pcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);cursor:pointer;transition:box-shadow .15s,border-color .15s;}
 .rot-pcard:hover{box-shadow:var(--shadow-md);border-color:var(--accent);}
@@ -437,6 +437,17 @@ table.rot-tbl{width:100%;border-collapse:collapse;font-size:12px;}
 table.rot-tbl th,table.rot-tbl td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle;}
 table.rot-tbl th{background:var(--surface2);color:var(--text2);font-weight:600;}
 table.rot-tbl select,table.rot-tbl input{padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;}
+.rot-subtbl textarea{width:100%;min-width:200px;font-size:12px;font-family:inherit;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);}
+.rot-subtbl td{vertical-align:top;}
+tr.rot-sub-bad td{background:var(--red-light);}
+tr.rot-sub-bad{background:var(--red-light);}
+@media (max-width:640px){
+  .rot-subtbl thead{display:none;}
+  .rot-subtbl,.rot-subtbl tbody,.rot-subtbl tr,.rot-subtbl td{display:block;width:100%;}
+  .rot-subtbl tr{border-bottom:1px solid var(--border);padding:6px 0;}
+  .rot-subtbl td{border:none !important;padding:3px 8px !important;}
+  .rot-subtbl textarea{min-width:0;}
+}
 .rot-info{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .rot-info textarea{width:100%;min-height:64px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;resize:vertical;background:var(--surface);color:var(--text);}
 .rot-info ul{margin:0;padding-left:18px;font-size:12px;}
@@ -2548,7 +2559,7 @@ function rotApply(d) {
     Object.assign(R, {
       isPublic: !!d.isPublic,
       loaded:true, err:'', role:d.role, me:d.me, pass:d.passScore,
-      staleDays:d.staleDays || 183, today:d.today || todayStr(),
+      staleDays:d.staleDays || 183, highDiff:d.highDiff || 7, today:d.today || todayStr(),
       people:d.people, items:d.items, subs:d.subs, hist:d.hist || [], scores:d.scores,
       common:d.common || [], dash:d.dash || []
     });
@@ -2694,9 +2705,9 @@ function renderRot(keepFilters) {
   } else {
     html += rotAdminOverviewHtml();
     const tab = (v, label) => `<button class="due-tab${R.view === v ? ' active' : ''}" onclick="rotSetView('${v}')">${label}</button>`;
-    html += `<div class="rot-viewbar"><div class="due-tabs">${tab('map','🗺 業務地圖')}${tab('matrix','🧮 評分總表')}${tab('todo',`📝 歷程待補（${rotTodo().length}）`)}</div>
+    html += `<div class="rot-viewbar"><div class="due-tabs">${tab('map','🗺 業務地圖')}${tab('matrix','🧮 評分總表')}${tab('todo',`📝 歷程待補（${rotTodo().length}）`)}${tab('help',`🆘 需要協助（${rotHelpRows().length}）`)}</div>
       ${R.view === 'matrix' ? rotLegend() : ''}</div>`;
-    html += R.view === 'matrix' ? rotMatrixHtml() : R.view === 'todo' ? rotTodoHtml() : rotMapHtml(null);
+    html += R.view === 'matrix' ? rotMatrixHtml() : R.view === 'todo' ? rotTodoHtml() : R.view === 'help' ? rotHelpHtml() : rotMapHtml(null);
   }
   body.innerHTML = html;
 }
@@ -2745,6 +2756,9 @@ function rotAdminOverviewHtml() {
     <div class="stat-card"><div class="label">只有 1 人以下熟悉</div><div class="value" style="color:${solo ? 'var(--orange)' : 'inherit'}">${solo}<small>項</small></div><div class="sub">現任＋曾任 評分 ≥${R.pass} 的人數</div></div>
     <div class="stat-card clickable" role="button" tabindex="0" onclick="rotSetView('todo')" onkeydown="if(event.key==='Enter')rotSetView('todo')">
       <div class="label">歷程待補</div><div class="value" style="color:${todo ? 'var(--orange)' : 'inherit'}">${todo}<small>筆</small></div><div class="sub">缺起訖年月或曾任評分</div></div>
+    <div class="stat-card clickable" role="button" tabindex="0" onclick="rotSetView('help')" onkeydown="if(event.key==='Enter')rotSetView('help')">
+      <div class="label">高難度細項（自評 ≥${R.highDiff}）</div><div class="value">${rotHighSubs().length}<small>項</small></div>
+      <div class="sub" style="${rotHighSubs().filter(x => rotNoHelp(x.help)).length ? 'color:var(--red);font-weight:600' : ''}">未寫需要協助 ${rotHighSubs().filter(x => rotNoHelp(x.help)).length} 項</div></div>
   </div>
   <div class="section-title">同仁業務熟悉度</div>
   <div class="rot-people">${stats.map(({ p, s }) => `
@@ -2775,7 +2789,7 @@ function rotProfileHtml(name) {
   const list = (title, html, n, empty) => `<div class="rot-list"><h5>${title}<span style="background:var(--surface2);color:var(--text2);border-radius:10px;padding:1px 8px;font-size:11px;">${n}</span></h5>${n ? html : `<div class="rot-empty">${empty}</div>`}</div>`;
   const recs = isAdm ? R.scores.filter(x => x.name === name).slice().reverse().slice(0, 12) : [];
   const recHtml = recs.map(x => { const it = R.items.find(i => i.id === x.gid); return `<tr style="cursor:pointer" onclick="rotOpen('${x.gid}')"><td>${rocDate(x.date)}</td><td style="text-align:left"><span style="color:var(--text2);font-size:11px;margin-right:4px;">${x.gid}</span>${esc(it ? it.name : x.gid)}</td><td>${rotBadge(x)}</td></tr>`; }).join('');
-  return `
+  return `${rotHighBanner(name)}
   <div class="rot-prof">
     <div>
       <h3>${esc(name)}</h3>
@@ -2799,6 +2813,7 @@ function rotProfileHtml(name) {
     ${list('⬜ 還沒負責過', none.map(it => li(it)).join(''), none.length, '全部都負責過了')}
   </div>
   ${rotWantHtml(name)}
+  ${rotMySubsHtml(name)}
   <div class="section-title">全部業務地圖</div>`;
 }
 
@@ -2809,6 +2824,75 @@ function rotWantHtml(name) {
   if (!xs.length) return '';
   return `<div class="rot-note" style="margin-top:10px">🌱 ${planRoc(P.year)} 年想學：${xs.map(x => { const it = R.items.find(i => i.id === x.gid);
     return `<a href="javascript:void 0" onclick="rotOpen('${it.id}')">${it.id} ${esc(it.name)}</a>（${PLAN_ST[x.status]}）`; }).join('、')}</div>`;
+}
+
+// ── 高難度細項／需要協助 ───────────────────
+function rotNoHelp(t) { return !String(t || '').trim() || /^(無|沒有|-|–|—|n\/?a)$/i.test(String(t).trim()); }
+function rotHighSubs(name) { return R.subs.filter(x => x.diff != null && x.diff >= R.highDiff && (!name || rotOwnersOf(x).includes(name))); }
+function rotOwnersOf(x) { return String(x.owner || '').split(/[、,，]/).map(t => t.trim()).filter(Boolean); }
+function rotHelpRows(all) { return R.subs.filter(x => (x.diff != null && x.diff >= R.highDiff) || (all && !rotNoHelp(x.help))); }
+function rotHighBanner(name) {
+  const n = rotHighSubs(name).filter(x => rotNoHelp(x.help)).length;
+  if (!n) return '';
+  const me = R.me === name;
+  return `<div class="rot-note" style="background:var(--red-light);color:var(--red);cursor:pointer" onclick="document.getElementById('rot-mysubs').scrollIntoView({behavior:'smooth'})">
+    ⚠️ ${me ? '你' : esc(name)}有 <b>${n}</b> 項高難度細項（自評 ≥${R.highDiff}）還沒寫「需要協助」${me ? '，請寫下卡在哪裡、需要什麼協助，主管才知道怎麼幫忙' : ''} ▾</div>`;
+}
+// 個人頁：我的細項（高難度排前面）；本人與管理員可以修改自評難度與需要協助
+function rotMySubsHtml(name) {
+  const mine = R.subs.filter(x => rotOwnersOf(x).includes(name));
+  if (!mine.length) return '';
+  const can = R.role === 'admin' || R.me === name;
+  const isHigh = x => x.diff != null && x.diff >= R.highDiff;
+  const sorted = mine.slice().sort((a, b) => (b.diff || 0) - (a.diff || 0));
+  const high = sorted.filter(isHigh), rest = sorted.filter(x => !isHigh(x));
+  const showAll = R.showAllSubs === name;
+  const it = gid => R.items.find(i => i.id === gid) || { id:gid, name:'' };
+  const row = x => { const bad = isHigh(x) && rotNoHelp(x.help);
+    return `<tr${bad ? ' class="rot-sub-bad"' : ''}><td><span style="color:var(--text2);font-size:11px">${esc(x.gid)}</span> ${esc(it(x.gid).name)}</td><td>${esc(x.name)}</td>
+    ${can ? `<td><input type="number" id="rs-d-${x.id}" min="1" max="10" step="0.5" value="${x.diff != null ? x.diff : ''}" style="width:64px"></td>
+      <td><textarea id="rs-h-${x.id}" rows="2" placeholder="${isHigh(x) ? '難度 ≥' + R.highDiff + ' 必填：卡在哪裡、需要什麼協助' : '選填'}">${esc(rotNoHelp(x.help) ? '' : x.help)}</textarea></td>
+      <td><button class="btn btn-sm btn-primary" onclick="rotSubSave('${x.id}')">儲存</button></td>`
+    : `<td>${x.diff != null ? x.diff : '—'}</td><td>${esc(x.help) || '—'}</td>`}</tr>`; };
+  return `<div class="rot-list" id="rot-mysubs" style="margin-top:12px"><h5>🔥 ${R.me === name ? '我的' : ''}高難度業務（自評 ≥${R.highDiff}）
+      <span style="background:var(--surface2);color:var(--text2);border-radius:10px;padding:1px 8px;font-size:11px;">${high.length}</span></h5>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:8px">自評難度 1～10（可填 0.5）；${R.highDiff} 分以上一定要寫「需要協助」${can ? '，每一列改完按儲存' : ''}</div>
+    <div style="overflow-x:auto"><table class="rot-tbl rot-subtbl"><thead><tr><th>業務</th><th>細項</th><th>自評難度</th><th>需要協助</th>${can ? '<th></th>' : ''}</tr></thead>
+    <tbody>${high.map(row).join('') || `<tr><td colspan="5" style="color:var(--text2)">沒有自評 ≥${R.highDiff} 的細項</td></tr>`}
+    ${showAll ? rest.map(row).join('') : ''}</tbody></table></div>
+    ${rest.length ? `<button class="btn btn-sm btn-default" style="margin-top:8px" onclick="R.showAllSubs=${showAll ? "''" : `'${esc(name)}'`};renderRot(true)">${showAll ? '收合' : `顯示其他 ${rest.length} 項細項（也可以改難度）`}</button>` : ''}
+  </div>`;
+}
+async function rotSubSave(id) {
+  const d = document.getElementById('rs-d-' + id).value.trim(), h = document.getElementById('rs-h-' + id).value.trim();
+  if (d !== '' && Number(d) >= R.highDiff && rotNoHelp(h)) { toast(`自評 ${R.highDiff} 分以上請寫需要協助`, 3500); document.getElementById('rs-h-' + id).focus(); return; }
+  try {
+    const r = await apiGet({ action:'rotSubSave', id, diff:d, help:h });
+    if (!r.ok) throw new Error(r.error);
+    rotApply(r.data); renderRot(true); toast('已儲存');
+  } catch (e) {
+    toast({ 'help required':`自評 ${R.highDiff} 分以上請寫需要協助`, 'bad diff':'難度請填 1～10（可 0.5）', forbidden:'登入已逾時或不是你負責的細項', closed:'業務地圖尚未開放' }[e.message] || '儲存失敗：' + e.message, 3500);
+  }
+}
+// 管理員：需要協助總表（高難度＋有寫需要協助的），附該同仁在這個大項的熟悉度
+function rotHelpHtml() {
+  const f = R.helpF || '';
+  const rows = rotHelpRows(R.helpAll).filter(x => (!f || rotOwnersOf(x).includes(f)) && (!R.group || (R.items.find(i => i.id === x.gid) || {}).group === R.group))
+    .sort((a, b) => (b.diff || 0) - (a.diff || 0) || (a.owner < b.owner ? -1 : 1));
+  const miss = rows.filter(x => x.diff >= R.highDiff && rotNoHelp(x.help)).length;
+  const it = gid => R.items.find(i => i.id === gid);
+  return `<div class="filter-bar" style="margin-bottom:10px"><label>同仁：</label><select onchange="R.helpF=this.value;renderRot(true)"><option value="">全部</option>${R.people.map(p => `<option${f === p.name ? ' selected' : ''}>${esc(p.name)}</option>`).join('')}</select>
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" ${R.helpAll ? 'checked' : ''} onchange="R.helpAll=this.checked;renderRot(true)" style="width:auto"> 也顯示難度 ${R.highDiff} 以下但有寫需要協助的</label>
+    <span style="font-size:12px;color:var(--text2)">共 ${rows.length} 項${miss ? `・<b style="color:var(--red)">${miss} 項高難度未寫協助</b>` : ''}</span></div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:8px">「熟悉度」是你在這個大項給他的最新評分：分數低多半是還不熟（帶著做、安排代理）；分數高仍覺得難，多半是業務本身或流程的問題</div>
+    <div style="overflow-x:auto"><table class="rot-tbl"><thead><tr><th>同仁</th><th>業務</th><th>細項</th><th>自評難度</th><th>需要協助</th><th>熟悉度</th></tr></thead><tbody>
+    ${rows.map(x => { const i = it(x.gid); const os = rotOwnersOf(x);
+      return `<tr style="cursor:pointer" onclick="rotOpen('${x.gid}')"><td>${os.map(o => rotChip(o)).join('')}</td>
+        <td><span style="color:var(--text2);font-size:11px">${esc(x.gid)}</span> ${esc(i ? i.name : '')}</td><td>${esc(x.name)}</td>
+        <td style="font-weight:700;${x.diff >= R.highDiff ? 'color:var(--red)' : ''}">${x.diff != null ? x.diff : '—'}</td>
+        <td style="white-space:pre-wrap;min-width:200px">${rotNoHelp(x.help) ? '<span style="color:var(--red);font-weight:600">未填</span>' : esc(x.help)}</td>
+        <td style="white-space:nowrap">${i ? os.filter(rotIsPerson).map(o => rotBadge(rotScoreOf(i, o))).join(' ') : ''}</td></tr>`; }).join('') || '<tr><td colspan="6" style="color:var(--text2)">沒有資料</td></tr>'}
+    </tbody></table></div>`;
 }
 
 // 業務地圖（卡片）
@@ -3097,7 +3181,7 @@ function rotOpen(gid) {
 
   // 細項
   html += `<div class="rot-sec"><h4>細項（${subs.length}）</h4>${subs.length ? `<table class="rot-tbl"><thead><tr><th>編號</th><th>業務項目</th><th>負責人</th>${showDiff ? '<th>自評難度</th><th>需要協助</th>' : ''}</tr></thead><tbody>
-    ${subs.map(s => `<tr><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${esc(s.owner)}</td>${showDiff ? `<td>${s.diff != null ? s.diff : '—'}</td><td>${esc(s.help) || '—'}</td>` : ''}</tr>`).join('')}
+    ${subs.map(s => `<tr><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${esc(s.owner)}</td>${showDiff ? `<td style="${s.diff >= R.highDiff ? 'color:var(--red);font-weight:700' : ''}">${s.diff != null ? s.diff : '—'}</td><td style="white-space:pre-wrap">${s.diff != null && s.diff >= R.highDiff && rotNoHelp(s.help) ? '<span style="color:var(--red);font-weight:600">未填（自評 ≥' + R.highDiff + ' 必填）</span>' : (esc(s.help) || '—')}</td>` : ''}</tr>`).join('')}
     </tbody></table>` : '<div style="font-size:12px;color:var(--text2)">沒有細項</div>'}</div>`;
 
   rotShowModal(html, isAdm);
