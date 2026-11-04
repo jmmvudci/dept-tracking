@@ -110,6 +110,8 @@ table.matrix tbody tr:hover td.task-info{background:#f8faff;}
 .tag-routine{background:#dbeafe;color:#1d4ed8;}
 .tag-temp{background:#fef3c7;color:#92400e;}
 .tag-collab{background:#f3e8ff;color:#6d28d9;}
+.tag-project{background:#e0f2fe;color:#075985;}
+.tag-tempq{background:#fffbeb;color:#a16207;border:1px dashed #f59e0b;}
 .tag-minutes{background:#dcfce7;color:#166534;}
 .tag-trial{background:#fce7f3;color:#9d174d;}
 .tag-doc{background:#e0f2fe;color:#0369a1;}
@@ -435,6 +437,15 @@ table.rot-tbl{width:100%;border-collapse:collapse;font-size:12px;}
 table.rot-tbl th,table.rot-tbl td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle;}
 table.rot-tbl th{background:var(--surface2);color:var(--text2);font-weight:600;}
 table.rot-tbl select,table.rot-tbl input{padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;}
+.rot-info{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.rot-info textarea{width:100%;min-height:64px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;resize:vertical;background:var(--surface);color:var(--text);}
+.rot-info ul{margin:0;padding-left:18px;font-size:12px;}
+.rot-info .lbl{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;}
+.rot-common{margin-top:28px;padding-top:16px;border-top:2px dashed var(--border);}
+.rot-common .rot-card{cursor:default;background:var(--surface2);}
+table.rot-tbl input.w{width:100%;min-width:90px;}
+table.rot-tbl td .btn{white-space:nowrap;}
+@media (max-width:640px){.rot-info{grid-template-columns:1fr;}}
 #rot-picker{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px;box-shadow:var(--shadow-md);z-index:250;display:none;min-width:260px;max-width:320px;max-height:80vh;overflow-y:auto;}
 #rot-picker .picker-title{font-size:11px;color:var(--text2);padding:4px 8px 8px;border-bottom:1px solid var(--border);margin-bottom:6px;line-height:1.5;}
 @media(max-width:900px){
@@ -556,7 +567,8 @@ table.rot-tbl select,table.rot-tbl input{padding:4px 6px;border:1px solid var(--
         <select id="dl-type-filter" onchange="renderDelayTable()">
           <option value="">全部類型</option>
           <option value="routine">年度例行</option>
-          <option value="temp">臨時交辦</option>
+          <option value="temp">交辦</option>
+          <option value="project">專案</option>
           <option value="collab">跨人員協作</option>
           <option value="minutes">會議記錄</option>
           <option value="trial">臨床試驗合約</option>
@@ -570,6 +582,8 @@ table.rot-tbl select,table.rot-tbl input{padding:4px 6px;border:1px solid var(--
         </label>
       </div>
       <div class="delay-table-wrap"><table class="delay-table" id="delay-table"></table></div>
+      <div class="section-title" style="margin-top:24px;">📌 交辦與專案件數（管理員限定，可作年終統計）</div>
+      <div class="delay-table-wrap"><table class="delay-table" id="assign-table"></table></div>
     </div>
   </div>
 
@@ -582,7 +596,9 @@ table.rot-tbl select,table.rot-tbl input{padding:4px 6px;border:1px solid var(--
       <select id="mx-type-filter" onchange="renderMatrix()">
         <option value="">全部</option>
         <option value="routine">年度例行</option>
-        <option value="temp">臨時交辦</option>
+        <option value="temp">交辦（追蹤期限）</option>
+        <option value="tempq">交辦（免追蹤）</option>
+        <option value="project">專案</option>
         <option value="collab">跨人員協作</option>
         <option value="agenda">會議議程</option>
         <option value="slides">會議簡報</option>
@@ -609,7 +625,9 @@ table.rot-tbl select,table.rot-tbl input{padding:4px 6px;border:1px solid var(--
         <select id="it-type-filter" onchange="renderItems()">
           <option value="">全部</option>
           <option value="routine">年度例行</option>
-          <option value="temp">臨時交辦</option>
+          <option value="temp">交辦（追蹤期限）</option>
+          <option value="tempq">交辦（免追蹤）</option>
+          <option value="project">專案</option>
           <option value="collab">跨人員協作</option>
           <option value="agenda">會議議程</option>
           <option value="slides">會議簡報</option>
@@ -728,7 +746,8 @@ table.rot-tbl select,table.rot-tbl input{padding:4px 6px;border:1px solid var(--
       <label>任務類型 *</label>
       <select id="f-type" onchange="onTypeChange()">
         <option value="routine">📅 年度例行業務</option>
-        <option value="temp">⚡ 臨時交辦任務</option>
+        <option value="temp">⚡ 交辦</option>
+        <option value="project">📁 專案</option>
         <option value="collab">🤝 跨人員協作項目</option>
         <option value="agenda">📋 會議議程</option>
         <option value="slides">🖥 會議簡報</option>
@@ -739,7 +758,13 @@ table.rot-tbl select,table.rot-tbl input{padding:4px 6px;border:1px solid var(--
         <option value="meetingtrack">🗂 會議追蹤（5工作天）</option>
       </select>
     </div>
-    <div class="modal-form-2col">
+    <div class="modal-form-row" id="f-track-row" style="display:none">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
+        <input type="checkbox" id="f-track" checked onchange="onTypeChange()" style="width:auto;accent-color:var(--accent);"> 需要追蹤期限
+      </label>
+      <div class="deadline-hint" id="track-hint"></div>
+    </div>
+    <div class="modal-form-2col" id="f-dl-row">
       <div class="modal-form-row">
         <label>截止日期</label>
         <input id="f-deadline" type="date">
@@ -926,7 +951,9 @@ function normDate(v) {
 // ══════════════════════════════════════════════
 const TYPE_META = {
   routine:      { label:'📅 年度例行',          tag:'tag-routine',      workdays: null },
-  temp:         { label:'⚡ 臨時交辦',          tag:'tag-temp',         workdays: null },
+  temp:         { label:'⚡ 交辦',              tag:'tag-temp',         workdays: null },
+  tempq:        { label:'⚡ 交辦（免追蹤）',    tag:'tag-tempq',        workdays: null },
+  project:      { label:'📁 專案',              tag:'tag-project',      workdays: null },
   collab:       { label:'🤝 跨人員協作',        tag:'tag-collab',       workdays: null },
   agenda:       { label:'📋 會議議程',          tag:'tag-agenda',       workdays: null },
   slides:       { label:'🖥 會議簡報',          tag:'tag-slides',       workdays: null },
@@ -1253,7 +1280,7 @@ function renderDelayTable() {
   }
 
   const typeLabel = {
-    routine:'年度例行', temp:'臨時交辦', collab:'跨人員協作',
+    routine:'年度例行', temp:'交辦', project:'專案', collab:'跨人員協作',
     minutes:'會議記錄', trial:'臨床試驗合約', doc:'公文',
     meeting:'教研部內部會議簡報', meetingtrack:'會議追蹤'
   };
@@ -1289,6 +1316,24 @@ function renderDelayTable() {
   document.getElementById('delay-table').innerHTML =
     `<thead><tr><th>姓名</th><th>任務類型</th><th>延遲筆數／項目</th><th>有截止日任務</th><th>延遲率</th></tr></thead>
      <tbody>${isEmpty ? '<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:20px">無符合條件的資料</td></tr>' : rows}</tbody>`;
+  renderAssignTable(fp);
+}
+
+// 每人交辦／專案件數（一筆交辦 2 位負責人，各算 1 件）
+function renderAssignTable(fp) {
+  const el = document.getElementById('assign-table');
+  if (!el) return;
+  const members = fp ? G.members.filter(m => m.name === fp) : G.members;
+  const cnt = (m, t) => G.items.filter(it => it.type === t && it.members.includes(m.name)).length;
+  let tot = [0, 0, 0];
+  const rows = members.map(m => {
+    const a = cnt(m, 'temp'), b = cnt(m, 'tempq'), c = cnt(m, 'project');
+    tot = [tot[0] + a, tot[1] + b, tot[2] + c];
+    return `<tr><td><strong>${esc(m.name)}</strong></td><td>${a}</td><td>${b}</td><td style="font-weight:600">${a + b}</td><td>${c}</td></tr>`;
+  }).join('');
+  el.innerHTML = `<thead><tr><th>姓名</th><th>交辦（追蹤期限）</th><th>交辦（免追蹤）</th><th>交辦合計</th><th>專案</th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:20px">無資料</td></tr>'}
+    ${!fp && members.length > 1 ? `<tr style="background:var(--surface2)"><td>合計（人次）</td><td>${tot[0]}</td><td>${tot[1]}</td><td style="font-weight:600">${tot[0] + tot[1]}</td><td>${tot[2]}</td></tr>` : ''}</tbody>`;
 }
 
 // ══════════════════════════════════════════════
@@ -1486,9 +1531,9 @@ function renderMatrix() {
       '<div style="padding:40px;text-align:center;color:var(--text2)">無資料</div>'; return;
   }
 
-  const typeOrder = ['routine','temp','collab','minutes','trial','doc','meeting','meetingtrack','agenda','slides'];
+  const typeOrder = ['routine','temp','tempq','project','collab','minutes','trial','doc','meeting','meetingtrack','agenda','slides'];
   const typeLabel = {
-    routine:'📅 年度例行業務', temp:'⚡ 臨時交辦任務', collab:'🤝 跨人員協作項目',
+    routine:'📅 年度例行業務', temp:'⚡ 交辦', tempq:'⚡ 交辦（免追蹤）', project:'📁 專案', collab:'🤝 跨人員協作項目',
     agenda:'📋 會議議程', slides:'🖥 會議簡報',
     minutes:'📝 會議記錄', trial:'🧪 臨床試驗合約', doc:'📄 公文',
     meeting:'🗣 教研部內部會議簡報', meetingtrack:'🗂 會議追蹤'
@@ -1813,6 +1858,14 @@ function onTypeChange() {
   const type = document.getElementById('f-type').value;
   const meta = TYPE_META[type];
   const hint = document.getElementById('deadline-hint');
+  // 交辦：勾「需要追蹤期限」＝要截止日、寄通知、算延遲；不勾＝只登記一筆，直接記為完成
+  const isTemp = type === 'temp';
+  const track = !isTemp || document.getElementById('f-track').checked;
+  document.getElementById('f-track-row').style.display = isTemp ? '' : 'none';
+  document.getElementById('f-dl-row').style.display = track ? '' : 'none';
+  document.getElementById('track-hint').textContent = isTemp
+    ? (track ? '會寄信通知負責人，有截止日、列入延遲率' : '小事登記：存檔後負責人直接記為「已完成」，不寄信、不算延遲，年底可統計件數')
+    : '';
   if (meta && meta.workdays) {
     const today = new Date();
     const dl = addWorkdays(today, meta.workdays);
@@ -1865,7 +1918,8 @@ function openItemModal(id) {
     const it = G.items.find(x=>x.id===id);
     if (it) {
       document.getElementById('f-name').value     = it.name;
-      document.getElementById('f-type').value     = it.type;
+      document.getElementById('f-type').value     = it.type === 'tempq' ? 'temp' : it.type;
+      document.getElementById('f-track').checked  = it.type !== 'tempq';
       document.getElementById('f-deadline').value = it.deadline||'';
       document.getElementById('f-deadtime').value = it.deadtime||'17:00';
       document.getElementById('f-note').value     = it.note||'';
@@ -1876,10 +1930,13 @@ function openItemModal(id) {
   } else {
     document.getElementById('f-name').value     = '';
     document.getElementById('f-type').value     = 'routine';
+    document.getElementById('f-track').checked  = true;
     document.getElementById('f-deadline').value = '';
     document.getElementById('f-deadtime').value = '17:00';
     document.getElementById('f-note').value     = '';
   }
+  onTypeChange();
+  if (id) document.getElementById('deadline-hint').textContent = '';
   document.getElementById('modal-overlay').classList.add('active');
 }
 
@@ -1889,15 +1946,19 @@ async function saveItem() {
   const members = Array.from(document.querySelectorAll('#f-members input:checked')).map(x=>x.value);
   if (!members.length) { toast('請選擇至少一位負責人'); return; }
 
+  let type = document.getElementById('f-type').value;
+  const quick = type === 'temp' && !document.getElementById('f-track').checked;
+  if (quick) type = 'tempq';
   const item = {
     id:       _editingItemId || ('item_'+Date.now()),
     name,
-    type:     document.getElementById('f-type').value,
-    deadline: document.getElementById('f-deadline').value || '',
-    deadtime: document.getElementById('f-deadtime').value || '17:00',
+    type,
+    deadline: quick ? '' : (document.getElementById('f-deadline').value || ''),
+    deadtime: quick ? '' : (document.getElementById('f-deadtime').value || '17:00'),
     members,
     note:     document.getElementById('f-note').value.trim()
   };
+  if (type === 'temp' && !item.deadline) { toast('需要追蹤期限的交辦請填截止日期（小事登記請取消勾選）', 3500); return; }
 
   if (_editingItemId) {
     const idx = G.items.findIndex(x=>x.id===_editingItemId);
@@ -1907,7 +1968,12 @@ async function saveItem() {
   }
 
   closeModal(); saveLocal();
-  try { const r = await apiGet({ action:'writeItem', item: JSON.stringify(item) }); if (r && r.ok === false) throw new Error(r.error); toast('任務已儲存'); }
+  try {
+    const r = await apiGet({ action:'writeItem', item: JSON.stringify(item) });
+    if (r && r.ok === false) throw new Error(r.error);
+    if (r && r.entries) { Object.assign(G.statusMap, r.entries); saveLocal(); }
+    toast(quick ? '交辦已登記（已記為完成）' : '任務已儲存');
+  }
   catch(e) { toast(e.message === 'forbidden' ? '沒有權限或登入逾時，請重新登入' : '儲存失敗：' + e.message, 4000); }
   renderItems(); renderMatrix(); renderOverview();
 }
@@ -2408,7 +2474,8 @@ function rotApply(d) {
       isPublic: !!d.isPublic,
       loaded:true, err:'', role:d.role, me:d.me, pass:d.passScore,
       staleDays:d.staleDays || 183, today:d.today || todayStr(),
-      people:d.people, items:d.items, subs:d.subs, hist:d.hist || [], scores:d.scores
+      people:d.people, items:d.items, subs:d.subs, hist:d.hist || [], scores:d.scores,
+      common:d.common || [], dash:d.dash || []
     });
     if (R.role !== 'admin') { R.person = R.role === 'member' ? R.me : ''; if (R.view !== 'map') R.view = 'map'; }
     else if (R.person && !R.people.some(p => p.name === R.person)) R.person = '';
@@ -2480,7 +2547,7 @@ function rotFilteredItems() {
   return R.items.filter(it =>
     (!R.group || it.group === R.group) &&
     (!q || it.name.includes(q) || it.id.includes(q.toUpperCase()) ||
-      it.owners.some(o => o.includes(q)) ||
+      it.owners.some(o => o.includes(q)) || (it.accred || '').includes(q) || (it.iso || '').includes(q) ||
       R.subs.some(s => s.gid === it.id && s.name.includes(q))));
 }
 
@@ -2685,7 +2752,21 @@ function rotMapHtml(focus) {
         </div>`;
       }).join('')}</div></div>`;
   }).join('');
-  return html || `<div class="ov-empty">沒有符合條件的業務</div>`;
+  return (html || `<div class="ov-empty">沒有符合條件的業務</div>`) + (R.group ? '' : rotCommonHtml(focus));
+}
+
+// 部門共同事務：大家輪流或一起做的事，不評分、不換人
+function rotCommonHtml(focus) {
+  const list = R.common || [];
+  const isAdm = R.role === 'admin';
+  if (!list.length && !isAdm) return '';
+  return `<div class="rot-common"><div class="rot-group"><h4>部門共同事務<span style="background:var(--surface2);color:var(--text2);border-radius:10px;padding:1px 8px;font-size:11px;">${list.length}</span>
+      <span style="font-weight:400;font-size:12px;">大家輪流或一起做的事，不評分、不換人</span>
+      ${isAdm ? `<button class="btn btn-sm btn-default" style="margin-left:auto" onclick="rotOpen('__common')">編輯</button>` : ''}</h4>
+    <div class="rot-grid">${list.map(c => `<div class="rot-card${focus && c.people.includes(focus) ? ' mine' : ''}">
+      <div class="top"><span class="gid">${esc(c.id)}</span><span class="nm">${esc(c.name)}</span></div>
+      ${c.note ? `<div style="font-size:11px;color:var(--text2);margin:2px 0 4px;">${esc(c.note)}</div>` : ''}
+      <div class="owners">${c.people.map(o => rotChip(o)).join('') || '<span class="rot-chip">全體</span>'}</div></div>`).join('') || '<div class="rot-empty">尚未設定</div>'}</div></div></div>`;
 }
 
 // 評分總表（管理員）：現任格可打分；曾任格淡色顯示最後評分；沒做過留白
@@ -2739,7 +2820,7 @@ function rotTodoHtml() {
 
 // ── 明細視窗（改好再一次儲存）──────────────
 //  R.draft.hist[id] = {from,to,score,note} 尚未儲存的歷程修改；R.draft.deps = 尚未儲存的代理人清單
-function rotDraftReset() { R.draft = { hist:{}, deps:null }; }
+function rotDraftReset() { R.draft = { hist:{}, deps:null, info:{}, dash:null, common:null }; }
 function rotDV(h, f) {
   const d = R.draft && R.draft.hist[h.id];
   return d && d[f] !== undefined ? d[f] : h[f];
@@ -2747,7 +2828,8 @@ function rotDV(h, f) {
 function rotDeps(it) { return R.draft && R.draft.deps ? R.draft.deps : it.deputies; }
 function rotDirtyCount() {
   if (!R.draft) return 0;
-  return Object.values(R.draft.hist).reduce((n, o) => n + Object.keys(o).length, 0) + (R.draft.deps ? 1 : 0);
+  return Object.values(R.draft.hist).reduce((n, o) => n + Object.keys(o).length, 0) + (R.draft.deps ? 1 : 0)
+    + Object.keys(R.draft.info || {}).length + (R.draft.dash ? 1 : 0) + (R.draft.common ? 1 : 0);
 }
 function rotDraft(id, f, v) {
   const h = R.hist.find(x => x.id === id);
@@ -2761,7 +2843,35 @@ function rotDraft(id, f, v) {
 function rotDraftOps() {
   const ops = Object.entries(R.draft.hist).map(([id, f]) => Object.assign({ type:'hist', id }, f));
   if (R.draft.deps) ops.push({ type:'deps', gid:R.openGid, names:R.draft.deps });
+  if (Object.keys(R.draft.info || {}).length) ops.push(Object.assign({ type:'info', gid:R.openGid }, R.draft.info));
+  if (R.draft.dash) ops.push({ type:'dash', rows:R.draft.dash });
+  if (R.draft.common) ops.push({ type:'common', rows:R.draft.common });
   return ops;
+}
+function rotDraftInfo(f, v) {
+  const it = R.items.find(x => x.id === R.openGid);
+  const norm = x => String(x || '').split('\n').map(t => t.trim()).filter(Boolean).join('\n');
+  if (norm(v) === norm(it[f])) delete R.draft.info[f]; else R.draft.info[f] = v;
+  rotUpdateBar();
+}
+// 表格型草稿（儀表板清單／共同事務）：第一次修改時複製一份
+function rotTblDraft(kind) {
+  if (!R.draft[kind]) R.draft[kind] = JSON.parse(JSON.stringify(kind === 'dash' ? R.dash : R.common));
+  return R.draft[kind];
+}
+function rotTblSet(kind, i, f, v) {
+  const rows = rotTblDraft(kind);
+  rows[i][f] = (f === 'owners' || f === 'people') ? String(v).split(/[、,，\s]+/).map(x => x.trim()).filter(Boolean) : v;
+  rotUpdateBar();
+}
+function rotTblAdd(kind) {
+  const rows = rotTblDraft(kind);
+  rows.push(kind === 'dash' ? { name:'', url:'', file:'', src:'', owners:[], note:'' } : { id:'', name:'', people:[], note:'' });
+  rotOpen(R.openGid);
+}
+function rotTblDel(kind, i) {
+  rotTblDraft(kind).splice(i, 1);
+  rotOpen(R.openGid);
 }
 function rotUpdateBar() {
   const n = rotDirtyCount();
@@ -2773,11 +2883,13 @@ function rotUpdateBar() {
 }
 
 function rotOpen(gid) {
-  const it = R.items.find(x => x.id === gid);
+  const it = gid === '__common' ? { id:'__common' } : R.items.find(x => x.id === gid);
   if (!it) return;
   if (R.openGid !== gid) { R.form = null; rotDraftReset(); }
   if (!R.draft) rotDraftReset();
   R.openGid = gid;
+  if (gid === '__common') return rotOpenCommon();
+  const isDash = gid === 'M03';
   const isAdm = R.role === 'admin';
   const subs = R.subs.filter(s => s.gid === gid);
   const showDiff = subs.some(s => s.diff != null || s.help);
@@ -2802,8 +2914,8 @@ function rotOpen(gid) {
         <td>${row ? rotYmInput(rotDV(row, 'from'), `rotDraft('${row.id}','from',this.value)`) : '—'}</td>
         <td style="white-space:nowrap">${can ? cur + (rotIsStale(it, o) ? ' <span style="font-size:11px;color:var(--orange)">該評了</span>' : '') : '<span style="font-size:12px;color:var(--text2)">非輪訓人員</span>'}</td>
         <td style="font-size:12px">${can ? rotHistText(gid, o) : ''}</td>
-        <td style="white-space:nowrap">${can ? `<button class="btn btn-sm btn-primary" onclick="rotForm('score','${pn}')">＋ 新增評分</button> ` : ''}<button class="btn btn-sm btn-default" onclick="rotForm('swap','${pn}')">換人</button>
-          <button class="btn btn-sm btn-default" onclick="rotForm('leave','${pn}')">卸任</button></td></tr>`;
+        <td style="white-space:nowrap">${can ? `<button class="btn btn-sm btn-primary" onclick="rotForm('score','${pn}')">＋ 新增評分</button> ` : ''}${isDash ? '' : `<button class="btn btn-sm btn-default" onclick="rotForm('swap','${pn}')">換人</button>
+          <button class="btn btn-sm btn-default" onclick="rotForm('leave','${pn}')">卸任</button>`}</td></tr>`;
     }).join('')}</tbody></table>`;
   if (isAdm) {
     const f = R.form;
@@ -2836,6 +2948,8 @@ function rotOpen(gid) {
       html += `<div class="rot-form">確定 <b>${esc(f.from)}</b> 卸任（不指定接手人）？ 卸任年月 <input id="rot-f-month" value="${rotNowYm()}" style="width:70px">
         <button class="btn btn-sm btn-danger" onclick="rotSubmitOwner()">確定卸任</button>
         <button class="btn btn-sm btn-default" onclick="rotForm(null)">取消</button></div>`;
+    } else if (isDash) {
+      html += `<div class="hint" style="margin-top:8px;">負責人依下方「儀表板清單」自動帶出：清單裡新出現的同仁自動列為現任，清單裡沒有了自動卸任（年月記當月）</div>`;
     } else {
       html += `<div style="margin-top:8px;"><button class="btn btn-sm btn-default" onclick="rotForm('add')">＋ 新增負責人</button></div>`;
     }
@@ -2849,6 +2963,22 @@ function rotOpen(gid) {
       ${isAdm ? `<select onchange="if(this.value)rotDeputy(this.value,true)"><option value="">＋ 新增代理人</option>${others.filter(n => !deps.includes(n) && !it.owners.includes(n)).map(n => `<option>${esc(n)}</option>`).join('')}</select>` : ''}
     </div></div>`;
   }
+
+  // 相關評鑑點項／ISO 文件
+  const infoV = f => R.draft.info[f] !== undefined ? R.draft.info[f] : (it[f] || '');
+  const infoList = v => { const a = String(v || '').split('\n').filter(Boolean); return a.length ? `<ul>${a.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<div style="font-size:12px;color:var(--text2)">—</div>'; };
+  if (isAdm) {
+    html += `<div class="rot-sec"><h4>相關評鑑點項・ISO 文件</h4><div class="rot-info">
+      <div><div class="lbl">相關評鑑點項（一行一筆）</div><textarea placeholder="例：2.3.1" oninput="rotDraftInfo('accred',this.value)">${esc(infoV('accred'))}</textarea></div>
+      <div><div class="lbl">ISO 文件（一行一筆）</div><textarea placeholder="例：文件編號、名稱" oninput="rotDraftInfo('iso',this.value)">${esc(infoV('iso'))}</textarea></div>
+    </div></div>`;
+  } else if (it.accred || it.iso) {
+    html += `<div class="rot-sec"><h4>相關評鑑點項・ISO 文件</h4><div class="rot-info">
+      <div><div class="lbl">相關評鑑點項</div>${infoList(it.accred)}</div><div><div class="lbl">ISO 文件</div>${infoList(it.iso)}</div></div></div>`;
+  }
+
+  // 儀表板清單（M03）
+  if (isDash) html += rotDashHtml(isAdm);
 
   // 歷任負責人
   const past = rotHistOf(gid).filter(h => h.status === '曾任');
@@ -2885,17 +3015,55 @@ function rotOpen(gid) {
     ${subs.map(s => `<tr><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${esc(s.owner)}</td>${showDiff ? `<td>${s.diff != null ? s.diff : '—'}</td><td>${esc(s.help) || '—'}</td>` : ''}</tr>`).join('')}
     </tbody></table>` : '<div style="font-size:12px;color:var(--text2)">沒有細項</div>'}</div>`;
 
-  html += `<div class="modal-actions rot-actions">
+  rotShowModal(html, isAdm);
+  const sel = document.getElementById('rot-f-to');
+  if (sel) sel.addEventListener('change', () => { document.getElementById('rot-f-other').style.display = sel.value === '__other' ? '' : 'none'; });
+}
+function rotModalActions(isAdm) {
+  return `<div class="modal-actions rot-actions">
     <span id="rot-dirty" style="flex:1;font-size:13px;align-self:center"></span>
     ${isAdm ? `<button class="btn btn-default" id="rot-discard" style="display:none" onclick="rotDiscard()">放棄修改</button>
     <button class="btn btn-primary" id="rot-save" style="display:none" onclick="rotSave([], '已儲存')">儲存</button>` : ''}
     <button class="btn btn-default" onclick="rotCloseModal()">關閉</button></div>`;
-  document.getElementById('rot-modal-box').innerHTML = html;
+}
+function rotShowModal(html, isAdm) {
+  document.getElementById('rot-modal-box').innerHTML = html + rotModalActions(isAdm);
   document.getElementById('rot-modal').classList.add('active');
-  const sel = document.getElementById('rot-f-to');
-  if (sel) sel.addEventListener('change', () => { document.getElementById('rot-f-other').style.display = sel.value === '__other' ? '' : 'none'; });
   if (isAdm) rotUpdateBar();
   if (R.saving) rotSetSaving(true);
+}
+// 儀表板清單：管理員可編輯（每列一個資料檔），其他人依儀表板分組顯示
+function rotDashHtml(isAdm) {
+  if (isAdm) {
+    const rows = R.draft.dash || R.dash;
+    const inp = (i, f, v, ph) => `<input class="w" value="${esc(v)}" placeholder="${ph || ''}" oninput="rotTblSet('dash',${i},'${f}',this.value)">`;
+    return `<div class="rot-sec"><h4>儀表板清單（${new Set(rows.map(r => r.name).filter(Boolean)).size} 個儀表板・${rows.length} 個資料檔）</h4>
+      <div style="overflow-x:auto"><table class="rot-tbl"><thead><tr><th>儀表板</th><th>資料檔</th><th>資料來源</th><th>負責人</th><th>網址</th><th>備註</th><th></th></tr></thead><tbody>
+      ${rows.map((r, i) => `<tr><td>${inp(i, 'name', r.name)}</td><td>${inp(i, 'file', r.file)}</td><td>${inp(i, 'src', r.src)}</td>
+        <td>${inp(i, 'owners', (r.owners || []).join('、'), '姓名、姓名')}</td><td>${inp(i, 'url', r.url)}</td><td>${inp(i, 'note', r.note)}</td>
+        <td><button class="btn btn-sm btn-danger" onclick="rotTblDel('dash',${i})">刪除</button></td></tr>`).join('')}
+      </tbody></table></div>
+      <div style="margin-top:8px;"><button class="btn btn-sm btn-default" onclick="rotTblAdd('dash')">＋ 新增資料檔</button>
+      <span class="hint" style="flex-basis:auto">同一個儀表板有多個資料檔就分多列；負責人填同仁全名，多人用「、」</span></div></div>`;
+  }
+  const by = {};
+  R.dash.forEach(r => (by[r.name] = by[r.name] || []).push(r));
+  return `<div class="rot-sec"><h4>儀表板清單（${Object.keys(by).length}）</h4><table class="rot-tbl"><thead><tr><th>儀表板</th><th>資料檔</th><th>負責人</th></tr></thead><tbody>
+    ${Object.entries(by).map(([n, rs]) => { const u = (rs.find(r => r.url) || {}).url;
+      return rs.map((r, k) => `<tr>${k ? '' : `<td rowspan="${rs.length}">${u ? `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(n)}</a>` : esc(n)}</td>`}
+        <td>${esc(r.file)}${r.src ? `<span style="color:var(--text2)">（${esc(r.src)}）</span>` : ''}</td><td>${(r.owners || []).map(o => rotChip(o)).join('') || '—'}</td></tr>`).join(''); }).join('')}
+    </tbody></table></div>`;
+}
+// 部門共同事務編輯（管理員）
+function rotOpenCommon() {
+  const rows = R.draft.common || R.common;
+  const inp = (i, f, v, ph) => `<input class="w" value="${esc(v)}" placeholder="${ph || ''}" oninput="rotTblSet('common',${i},'${f}',this.value)">`;
+  rotShowModal(`<h2>部門共同事務</h2><div style="font-size:12px;color:var(--text2);">大家輪流或一起做的事，列在業務地圖最下方，不評分、不換人</div>
+    <div class="rot-sec"><table class="rot-tbl"><thead><tr><th>編號</th><th>共同事務</th><th>參與同仁</th><th>備註</th><th></th></tr></thead><tbody>
+    ${rows.map((r, i) => `<tr><td>${esc(r.id || '新')}</td><td>${inp(i, 'name', r.name)}</td><td>${inp(i, 'people', (r.people || []).join('、'), '空白＝全體')}</td><td>${inp(i, 'note', r.note)}</td>
+      <td><button class="btn btn-sm btn-danger" onclick="rotTblDel('common',${i})">刪除</button></td></tr>`).join('')}
+    </tbody></table>
+    <div style="margin-top:8px;"><button class="btn btn-sm btn-default" onclick="rotTblAdd('common')">＋ 新增共同事務</button></div></div>`, true);
 }
 // 某人在某業務的歷次評分（管理員）：115/04/12 2 → 115/10/30 3，每筆可刪
 function rotHistText(gid, name) {
