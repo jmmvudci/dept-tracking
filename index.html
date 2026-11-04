@@ -481,6 +481,71 @@ table.rot-tbl td .btn{white-space:nowrap;}
 .ov-reason{flex:1;min-width:160px;font-size:12px;color:#6d28d9;}
 .ov-approve{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
 .ov-approve input{padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;}
+/* ── 年度工作計畫 ── */
+.plan-openst{font-size:13px;color:var(--text2);margin-right:auto;}
+.plan-openst.on{color:var(--green);font-weight:600;}
+.plan-todo{display:flex;flex-direction:column;gap:6px;margin-bottom:20px;}
+.plan-todo-row{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px 12px;cursor:pointer;font-size:13px;}
+.plan-todo-row:hover{border-color:var(--accent);}
+.plan-todo-row .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.plan-head{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:12px;}
+.plan-head h3{font-size:18px;margin:0 0 6px;}
+.plan-head .sub{font-size:12px;color:var(--text2);line-height:2;}
+.plan-duty{display:inline-block;background:var(--surface2);border-radius:10px;padding:1px 8px;margin:0 4px 2px 0;font-size:11px;color:var(--text);}
+.plan-sum{display:flex;gap:18px;align-items:center;}
+.plan-sum div{text-align:center;}
+.plan-sum b{display:block;font-size:22px;}
+.plan-sum span{font-size:11px;color:var(--text2);}
+.plan-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;}
+.plan-cat{margin-bottom:18px;}
+.plan-cat h4{font-size:13px;font-weight:700;color:var(--text2);margin:0 0 8px;}
+.plan-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;}
+.plan-item.flash{border-color:var(--red);box-shadow:0 0 0 2px var(--red-light);}
+.plan-item .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;}
+.plan-item .what{font-weight:600;font-size:14px;}
+.plan-item .meta{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;color:var(--text2);margin:6px 0;}
+.plan-item .row{display:flex;gap:8px;font-size:12px;margin-top:3px;}
+.plan-item .row .k{color:var(--text2);flex-shrink:0;width:72px;}
+.plan-item .btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+.plan-st{font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;white-space:nowrap;background:var(--gray-light);color:var(--gray);flex-shrink:0;}
+.plan-st.submitted{background:#fef3c7;color:#92400e;}
+.plan-st.returned{background:#ffedd5;color:#c2410c;}
+.plan-st.approved{background:#dbeafe;color:#1d4ed8;}
+.plan-st.done{background:var(--green-light);color:var(--green);}
+.plan-st.overdue{background:var(--red-light);color:var(--red);}
+.plan-cmtbox{font-size:12px;background:var(--surface2);border-radius:6px;padding:6px 10px;margin-top:8px;}
+.plan-cmtbox.warn{background:#fff7ed;color:#9a3412;}
+.plan-log{font-size:12px;color:var(--text2);background:var(--surface2);border-radius:6px;padding:8px 10px;margin-top:8px;line-height:1.8;}
+.plan-log span{font-variant-numeric:tabular-nums;}
+.plan-qtbl td{vertical-align:top;font-size:12px;}
+table.delay-table.plan-qtbl th{background:var(--surface2);color:var(--text2);}
+.plan-tip{font-size:12px;color:var(--text2);}
+table.delay-table.plan-qtbl th.cur{background:#dbeafe;color:#1d4ed8;}
+.plan-qtbl .pn{font-size:11px;color:var(--text2);margin-top:3px;text-align:left;}
+.plan-qtbl textarea{width:100%;min-width:110px;font-size:12px;font-family:inherit;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);}
+.plan-qtbl .plan-cmt td{background:var(--surface2);}
+.plan-pg{font-size:11px;font-weight:600;padding:1px 7px;border-radius:10px;background:var(--gray-light);color:var(--gray);}
+.plan-pg.doing{background:#dbeafe;color:#1d4ed8;}
+.plan-pg.done{background:var(--green-light);color:var(--green);}
+.plan-pg.behind{background:var(--red-light);color:var(--red);}
+.plan-foot{display:none;font-size:11px;color:var(--text2);margin-top:12px;}
+.plan-cats{display:flex;gap:8px;flex-wrap:wrap;}
+.plan-cats label{display:flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:8px;padding:7px 12px;cursor:pointer;font-size:13px;}
+.plan-cats label.on{border-color:var(--accent);background:var(--accent-light,#eff6ff);font-weight:600;}
+.plan-cats input{width:auto;margin:0;}
+#plan-modal{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;display:none;align-items:center;justify-content:center;}
+#plan-modal.active{display:flex;}
+#plan-modal-box{background:var(--surface);border-radius:var(--radius);padding:22px;width:94vw;max-width:620px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-md);}
+@media (max-width:640px){.plan-sum{gap:12px;}.plan-sum b{font-size:18px;}.plan-item .top{flex-direction:column;}}
+@media print{
+  body.print-plan *{visibility:hidden !important;}
+  body.print-plan #plan-print,body.print-plan #plan-print *{visibility:visible !important;}
+  body.print-plan #plan-print{position:absolute;left:0;top:0;width:100%;}
+  body.print-plan .no-print{display:none !important;}
+  body.print-plan .plan-foot{display:block;}
+  body.print-plan .plan-item,body.print-plan .plan-head{break-inside:avoid;box-shadow:none;}
+  body.print-plan .plan-qtbl textarea{border:none;resize:none;}
+}
 </style>
 </head>
 <body>
@@ -501,6 +566,7 @@ table.rot-tbl td .btn{white-space:nowrap;}
   <button class="tab-btn active" data-panel="panel-overview" onclick="switchTab(this)">📊 總覽</button>
   <button class="tab-btn" data-panel="panel-matrix" onclick="switchTab(this)">🗂 追蹤矩陣</button>
   <button class="tab-btn hidden" id="tab-rot" data-panel="panel-rot" onclick="switchTab(this)">🗺 業務地圖</button>
+  <button class="tab-btn hidden" id="tab-plan" data-panel="panel-plan" onclick="switchTab(this)">🎯 年度計畫</button>
   <button class="tab-btn hidden" id="tab-items" data-panel="panel-items" onclick="switchTab(this)">📝 任務管理</button>
   <button class="tab-btn hidden" id="tab-settings" data-panel="panel-settings" onclick="switchTab(this)">⚙️ 設定</button>
 </div>
@@ -661,6 +727,8 @@ table.rot-tbl td .btn{white-space:nowrap;}
     </div>
     <div id="rot-body"></div>
   </div>
+  <!-- 年度工作計畫 -->
+  <div class="panel" id="panel-plan"><div id="plan-body"></div></div>
   <!-- Settings -->
   <div class="panel" id="panel-settings">
     <div class="settings-section">
@@ -713,6 +781,7 @@ table.rot-tbl td .btn{white-space:nowrap;}
 </div>
 
 <!-- 業務地圖：明細 -->
+<div id="plan-modal"><div id="plan-modal-box"></div></div>
 <div id="rot-modal" onclick="if(event.target===this)rotCloseModal()">
   <div id="rot-modal-box"></div>
 </div>
@@ -1019,6 +1088,10 @@ function applyAuth() {
   document.getElementById('tab-settings').classList.toggle('hidden', !isAdmin());
   // 業務地圖：上線前只有管理員可見（後端 rotPublic 開關）
   document.getElementById('tab-rot').classList.toggle('hidden', !(isAdmin() || R.open));
+  // 年度計畫：管理員＋同仁（專用帳號、未登入看不到）
+  document.getElementById('tab-plan').classList.toggle('hidden', !planCanSee());
+  const act = document.querySelector('.tab-btn.active');
+  if (act && act.classList.contains('hidden')) switchTab(document.querySelector('.tab-btn[data-panel="panel-overview"]'));
   // 停班停課順延：僅管理員
   document.getElementById('btn-shift').style.display = isAdmin() ? '' : 'none';
   // 延遲率：僅管理員可見
@@ -1066,6 +1139,7 @@ async function loadAll() {
     mergeBuiltinHolidays();
   }
   await rotLoad();
+  P.loaded = false; P.person = ''; P.form = null;
   showLoading(false);
   applyAuth(); populateFilters(); refreshAll();
 }
@@ -2390,7 +2464,8 @@ function switchTab(btn) {
   if (pid==='panel-matrix')    renderMatrix();
   if (pid==='panel-items')     renderItems();
   if (pid==='panel-settings')  renderSettings();
-  if (pid==='panel-rot')       renderRot();
+  if (pid==='panel-rot')       { renderRot(); if (planCanSee() && !P.loaded) planLoad().then(() => renderRot(true)); }
+  if (pid==='panel-plan')      { renderPlan(); planLoad().then(renderPlan); }
 }
 
 // ══════════════════════════════════════════════
@@ -2723,7 +2798,17 @@ function rotProfileHtml(name) {
     ${list('🔁 曾經負責', past.map(it => li(it, rotPastRows(it.id, name).map(period).join('；'))).join(''), past.length, '尚無')}
     ${list('⬜ 還沒負責過', none.map(it => li(it)).join(''), none.length, '全部都負責過了')}
   </div>
+  ${rotWantHtml(name)}
   <div class="section-title">全部業務地圖</div>`;
+}
+
+// 年度計畫「能力發展」選的業務 → 標成想學（年度計畫有載入時才顯示）
+function rotWantHtml(name) {
+  if (typeof P === 'undefined' || !P.loaded) return '';
+  const xs = P.items.filter(x => x.name === name && x.cat === 'grow' && x.status !== 'cancelled' && R.items.some(i => i.id === x.gid));
+  if (!xs.length) return '';
+  return `<div class="rot-note" style="margin-top:10px">🌱 ${planRoc(P.year)} 年想學：${xs.map(x => { const it = R.items.find(i => i.id === x.gid);
+    return `<a href="javascript:void 0" onclick="rotOpen('${it.id}')">${it.id} ${esc(it.name)}</a>（${PLAN_ST[x.status]}）`; }).join('、')}</div>`;
 }
 
 // 業務地圖（卡片）
@@ -3186,6 +3271,370 @@ async function rotPickerSave(v) {
   const { gid, name } = _rotPick;
   rotClosePicker();
   await rotSave([{ type:'score', gid, name, score:v }], `${name}：${v} 分（${rocDate(R.today)}）`);
+}
+
+
+// ══════════════════════════════════════════════
+//  🎯 年度工作計畫（Plan.gs）
+//  同仁：自己的計畫（新增／修改／送審、季進度、申請延後）
+//  管理員：開放填寫開關、年度、總覽（待審核、逾期、年終總表）、每人總覽頁（審核、季意見、列印）
+// ══════════════════════════════════════════════
+const P = { loaded:false, err:'', person:'', form:null, edit:null, saving:false, catF:'' };
+const PLAN_CAT = { improve:'業務改善', new:'新做的事', grow:'能力發展' };
+const PLAN_CAT_ICON = { improve:'🔧', new:'✨', grow:'🌱' };
+const PLAN_ST = { draft:'草稿', submitted:'待審核', returned:'退回修改', approved:'執行中', done:'已完成', cancelled:'已取消' };
+const PLAN_PROG = { todo:'未開始', doing:'進行中', done:'已完成', behind:'落後' };
+const PLAN_ERR = {
+  forbidden:'登入已逾時，請重新登入', closed:'目前未開放填寫，請洽主管', locked:'已送審或核定的項目不能修改',
+  'too many':'每人最多 5 項', 'bad duty':'對應業務不符合規則：業務改善／新做的事要選自己負責的業務；能力發展要選還沒負責的業務或一般能力',
+  'missing category':'請選類別', 'missing duty':'請選對應業務', 'missing duty note':'選「其他」請寫說明', 'missing what':'請寫要做什麼',
+  'missing month':'請填預計完成月份（例：116/06）', 'missing criteria':'請寫怎麼算完成', 'bad month':'月份格式請用 116/06',
+  'comment required':'退回請寫意見', 'not later':'延後的月份要比原本的晚', 'reason required':'請寫延後原因', 'nothing to submit':'沒有要送審的項目',
+  'not approved':'核定後才能更新進度或申請延後'
+};
+function planCanSee() { return isAdmin() || (!!currentUser() && !isTaskOnly()); }
+function planRoc(y) { return Number(y) - 1911; }
+function planYmNum(ym) { const m = String(ym || '').match(/^(\d{2,3})\/(\d{2})$/); return m ? Number(m[1]) * 100 + Number(m[2]) : 0; }
+function planNowYm() { const t = P.today || todayStr(); return (Number(t.slice(0, 4)) - 1911) * 100 + Number(t.slice(5, 7)); }
+function planCurQ() {
+  const t = P.today || todayStr(), y = Number(t.slice(0, 4));
+  if (y < P.year) return 'Q1'; if (y > P.year) return 'Q4';
+  return 'Q' + Math.ceil(Number(t.slice(5, 7)) / 3);
+}
+function planDuty(gid) {
+  if (gid === 'COMMON') return '部門共同事務';
+  if (gid === 'GENERAL') return '一般能力';
+  if (gid === 'OTHER') return '其他';
+  const d = (P.duties || []).find(x => x.id === gid);
+  return d ? `${d.id} ${d.name}` : (gid || '（未選）');
+}
+function planDutyText(x) { return planDuty(x.gid) + (x.gid === 'OTHER' && x.gidNote ? `：${x.gidNote}` : ''); }
+function planOverdue(x) { return x.status === 'approved' && planYmNum(x.ym) && planYmNum(x.ym) < planNowYm(); }
+function planActive(name) { return P.items.filter(x => x.name === name && x.status !== 'cancelled'); }
+
+async function planLoad() {
+  if (!planCanSee()) { P.loaded = false; return; }
+  try {
+    const d = await apiGet({ action:'planRead' });
+    if (!d.ok) throw new Error(d.error || 'load failed');
+    planApply(d);
+  } catch (e) { P.loaded = false; P.err = e.message; }
+}
+function planApply(d) {
+  Object.assign(P, { loaded:true, err:'', role:d.role, me:d.me, year:d.year, open:d.open, today:d.today, max:d.max,
+    people:d.people, duties:d.duties, rel:d.rel, items:d.items, comments:d.comments });
+  if (P.role !== 'admin') P.person = P.me;
+  else if (P.person && !P.people.includes(P.person)) P.person = '';
+}
+async function planOp(o, msg) {
+  if (P.saving) return false;
+  P.saving = true;
+  let r = null, err = null;
+  try { r = await apiGet({ action:'planOp', op: JSON.stringify(o) }); if (!r.ok) err = r.error; }
+  catch (e) { err = e.message || '連線失敗'; }
+  P.saving = false;
+  if (r && r.data && r.data.ok) planApply(r.data);
+  if (err) {
+    let m = PLAN_ERR[err] || ('儲存失敗：' + err);
+    if (r && r.id) { const x = P.items.find(i => i.id === r.id); if (x) { m = `「${x.what || '未命名'}」：` + m; P.flash = x.id; } }
+    toast(m, 4500);
+  } else { P.form = null; if (msg) toast(msg); }
+  renderPlan();
+  return !err;
+}
+
+function renderPlan() {
+  const body = document.getElementById('plan-body');
+  if (!body) return;
+  if (!P.loaded) {
+    body.innerHTML = P.err ? `<div class="rot-note" style="background:var(--red-light);color:var(--red)">年度計畫載入失敗：${esc(P.err)}。請確認 Apps Script 已更新。</div>` : '<div class="rot-note">載入中…</div>';
+    return;
+  }
+  let html = '';
+  if (P.role === 'admin') {
+    html += planAdminBar();
+    html += P.person ? `<div class="rot-viewbar"><button class="btn btn-sm btn-default" onclick="planPick('')">← 全部同仁</button>
+      <button class="btn btn-sm btn-default" onclick="planPrint()">🖨 列印／存 PDF</button></div>` + planPersonHtml(P.person) : planAdminHtml();
+  } else {
+    html += `<div class="rot-viewbar"><span class="plan-openst ${P.open ? 'on' : ''}">${P.open ? '● 開放填寫中' : '○ 目前未開放填寫（可更新已核定項目的進度）'}</span>
+      <button class="btn btn-sm btn-default" onclick="planPrint()">🖨 列印／存 PDF</button></div>` + planPersonHtml(P.me);
+  }
+  body.innerHTML = html;
+  if (P.flash) { const el = document.getElementById('pi-' + P.flash); if (el) { el.classList.add('flash'); el.scrollIntoView({ block:'center' }); } P.flash = null; }
+}
+function planPick(n) { P.person = n; P.form = null; renderPlan(); window.scrollTo({ top:0 }); }
+
+// ── 管理員：上方設定列 ───────────────────────
+function planAdminBar() {
+  const ys = [P.year - 1, P.year, P.year + 1];
+  return `<div class="rot-switchbar">
+    <button class="rot-switch${P.open ? ' on' : ''}" role="switch" aria-checked="${P.open}" aria-label="開放同仁填寫年度計畫" onclick="planToggleOpen()"></button>
+    <b>開放填寫</b><span class="st">${P.open ? '同仁可以新增、修改、送審' : '關閉：同仁只能看、更新已核定項目的進度'}</span>
+    <span style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:13px;">計畫年度
+      <select onchange="planSetYear(this.value)">${ys.map(y => `<option value="${y}"${y === P.year ? ' selected' : ''}>${planRoc(y)} 年（${y}）</option>`).join('')}</select></span>
+  </div>`;
+}
+async function planToggleOpen() {
+  const next = !P.open;
+  if (next && !confirm('開放同仁填寫／修改年度計畫？')) return;
+  await planOp({ type:'setOpen', value:next }, next ? '已開放填寫' : '已關閉填寫');
+}
+async function planSetYear(y) {
+  if (!confirm(`切換到 ${planRoc(y)} 年的計畫？同仁看到的也會一起切換。`)) { renderPlan(); return; }
+  await planOp({ type:'setYear', year:Number(y) }, `已切換到 ${planRoc(y)} 年`);
+}
+
+// ── 管理員總覽 ───────────────────────────────
+function planAdminHtml() {
+  const act = P.items.filter(x => x.status !== 'cancelled');
+  const sub = act.filter(x => x.status === 'submitted');
+  const dly = act.filter(x => x.delay && x.delay.pending);
+  const od = act.filter(planOverdue);
+  const appr = act.filter(x => x.status === 'approved' || x.status === 'done');
+  const done = act.filter(x => x.status === 'done');
+  const todo = sub.concat(dly.filter(x => !sub.includes(x))).concat(od.filter(x => !sub.includes(x) && !dly.includes(x)));
+  const tag = x => x.status === 'submitted' ? '<span class="plan-st submitted">待審核</span>' : x.delay && x.delay.pending ? `<span class="plan-st returned">申請延後到 ${esc(x.delay.pending.ym)}</span>` : `<span class="plan-st overdue">逾期未完成（${esc(x.ym)}）</span>`;
+  const catF = P.catF;
+  const sum = n => { const a = planActive(n).filter(x => !catF || x.cat === catF);
+    return { all:a.length, draft:a.filter(x => x.status === 'draft' || x.status === 'returned').length, sub:a.filter(x => x.status === 'submitted').length,
+      appr:a.filter(x => x.status === 'approved' || x.status === 'done').length, done:a.filter(x => x.status === 'done').length,
+      od:a.filter(planOverdue).length, delays:a.reduce((k, x) => k + ((x.delay && x.delay.done) || []).length, 0),
+      cancel:P.items.filter(x => x.name === n && x.status === 'cancelled' && (!catF || x.cat === catF)).length }; };
+  return `
+  <div class="rot-stats">
+    <div class="stat-card"><div class="label">${planRoc(P.year)} 年計畫</div><div class="value">${act.length}<small>項</small></div><div class="sub">${P.people.length} 位同仁</div></div>
+    <div class="stat-card"><div class="label" style="color:var(--orange)">待審核／延後待核</div><div class="value" style="color:${sub.length + dly.length ? 'var(--orange)' : 'inherit'}">${sub.length}<small>項</small> ／ ${dly.length}<small>項</small></div><div class="sub">下方「待處理」可直接點進去</div></div>
+    <div class="stat-card"><div class="label" style="color:var(--red)">逾期未完成</div><div class="value" style="color:${od.length ? 'var(--red)' : 'inherit'}">${od.length}<small>項</small></div><div class="sub">預計完成月份已過、還沒完成（每季檢核用）</div></div>
+    <div class="stat-card"><div class="label" style="color:var(--green)">已完成</div><div class="value" style="color:var(--green)">${done.length}<small>/ ${appr.length} 項</small></div><div class="sub">已核定的項目中</div></div>
+  </div>
+  ${todo.length ? `<div class="section-title">待處理（${todo.length}）</div><div class="plan-todo">${todo.map(x => `
+    <div class="plan-todo-row" role="button" tabindex="0" onclick="planPick('${esc(x.name)}')" onkeydown="if(event.key==='Enter')planPick('${esc(x.name)}')">
+      <b>${esc(x.name)}</b><span class="t">${PLAN_CAT_ICON[x.cat] || ''} ${esc(x.what)}</span>${tag(x)}</div>`).join('')}</div>` : ''}
+  <div class="section-title">同仁年度計畫</div>
+  <div class="rot-people">${P.people.map(n => { const s = sum(n); return `
+    <div class="rot-pcard" role="button" tabindex="0" onclick="planPick('${esc(n)}')" onkeydown="if(event.key==='Enter')planPick('${esc(n)}')">
+      <div class="name">${esc(n)}</div>
+      <div class="meta">${s.all ? `共 ${s.all} 項・草稿 ${s.draft}・待審 ${s.sub}・執行中 ${s.appr - s.done}・完成 ${s.done}` : '尚未填寫'}</div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${s.appr ? Math.round(s.done / s.appr * 100) : 0}%"></div></div>
+      <div class="pct">${s.appr ? `完成 ${s.done} / ${s.appr} 項` : '尚未核定'}${s.od ? `・<span style="color:var(--red)">逾期 ${s.od}</span>` : ''}</div>
+    </div>`; }).join('')}</div>
+  <div class="section-title" style="display:flex;align-items:center;gap:10px;">年終總表
+    <select onchange="P.catF=this.value;renderPlan()" style="font-size:12px;"><option value="">全部類別</option>${Object.entries(PLAN_CAT).map(([k, v]) => `<option value="${k}"${catF === k ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
+  <div class="delay-table-wrap"><table class="delay-table"><thead><tr><th>姓名</th><th>已核定</th><th>已完成</th><th>完成率</th><th>延後次數</th><th>逾期未完成</th><th>未核定</th><th>取消</th></tr></thead><tbody>
+  ${P.people.map(n => { const s = sum(n); return `<tr><td><strong>${esc(n)}</strong></td><td>${s.appr}</td><td>${s.done}</td>
+    <td style="font-weight:600">${s.appr ? Math.round(s.done / s.appr * 100) + '%' : '—'}</td><td>${s.delays}</td>
+    <td style="${s.od ? 'color:var(--red);font-weight:600' : ''}">${s.od}</td><td>${s.draft + s.sub}</td><td>${s.cancel}</td></tr>`; }).join('')}
+  </tbody></table></div>`;
+}
+
+// ── 個人年度計畫總覽頁（同仁自己／管理員點進來）──
+function planPersonHtml(name) {
+  const isAdm = P.role === 'admin';
+  const rel = (P.rel && P.rel[name]) || { cur:[], past:[] };
+  const mine = P.items.filter(x => x.name === name);
+  const act = mine.filter(x => x.status !== 'cancelled');
+  const editable = act.filter(x => x.status === 'draft' || x.status === 'returned');
+  const canEdit = isAdm || P.open;
+  const appr = act.filter(x => x.status === 'approved' || x.status === 'done');
+  const done = act.filter(x => x.status === 'done');
+  let html = `<div id="plan-print"><div class="plan-head">
+    <div><h3>${esc(name)}　${planRoc(P.year)} 年度工作計畫</h3>
+      <div class="sub">目前負責：${rel.cur.length ? rel.cur.map(g => `<span class="plan-duty">${esc(planDuty(g))}</span>`).join('') : '—'}</div></div>
+    <div class="plan-sum"><div><b>${act.length}</b><span>項計畫</span></div><div><b>${appr.length}</b><span>已核定</span></div><div><b style="color:var(--green)">${done.length}</b><span>已完成</span></div>
+      <div><b style="color:${act.filter(planOverdue).length ? 'var(--red)' : 'inherit'}">${act.filter(planOverdue).length}</b><span>逾期</span></div></div>
+  </div>`;
+  // 操作列
+  html += `<div class="plan-actions no-print">`;
+  if (canEdit && act.length < P.max) html += `<button class="btn btn-sm btn-primary" onclick="planEdit('', '${esc(name)}')">＋ 新增計畫</button>`;
+  if (canEdit && act.length >= P.max) html += `<span class="plan-tip">已達上限 ${P.max} 項</span>`;
+  if (canEdit && editable.length) html += `<button class="btn btn-sm btn-default" style="border-color:var(--accent);color:var(--accent)" onclick="planSubmit('${esc(name)}')">送主管審核（${editable.length} 項）</button>`;
+  if (!isAdm) html += `<span class="plan-tip">每人 1～${P.max} 項，只寫今年要「改善」或「新做」的事；能力發展可選填</span>`;
+  html += `</div>`;
+  if (!act.length) html += `<div class="rot-empty" style="padding:24px">${isAdm ? '還沒有填寫' : '還沒有填寫，按「＋ 新增計畫」開始'}</div>`;
+  ['improve', 'new', 'grow'].forEach(c => {
+    const xs = act.filter(x => x.cat === c);
+    if (xs.length) html += `<div class="plan-cat"><h4>${PLAN_CAT_ICON[c]} ${PLAN_CAT[c]}（${xs.length}）</h4>${xs.map(planItemHtml).join('')}</div>`;
+  });
+  const nocat = act.filter(x => !PLAN_CAT[x.cat]);
+  if (nocat.length) html += `<div class="plan-cat"><h4>未分類（${nocat.length}）</h4>${nocat.map(planItemHtml).join('')}</div>`;
+  // 每季檢核
+  if (appr.length) {
+    const Q = ['Q1', 'Q2', 'Q3', 'Q4'], cq = Number((P.today || todayStr()).slice(0, 4)) === P.year ? planCurQ() : '';
+    const cmt = q => (P.comments.find(c => c.name === name && c.q === q) || {}).text || '';
+    html += `<div class="plan-cat"><h4>📅 每季檢核</h4><div class="delay-table-wrap" style="margin-top:0"><table class="delay-table plan-qtbl"><thead><tr><th style="text-align:left">計畫</th>${Q.map(q => `<th${q === cq ? ' class="cur"' : ''}>${q}${q === cq ? '（本季）' : ''}</th>`).join('')}</tr></thead><tbody>
+      ${appr.map(x => `<tr><td style="text-align:left">${PLAN_CAT_ICON[x.cat] || ''} ${esc(x.what)}<div style="font-size:11px;color:var(--text2)">預計 ${esc(x.ym)}</div></td>
+        ${Q.map(q => { const g = x.prog[q]; return `<td>${g ? `<span class="plan-pg ${g.st}">${PLAN_PROG[g.st]}</span>${g.note ? `<div class="pn">${esc(g.note)}</div>` : ''}` : '<span style="color:var(--text2)">—</span>'}</td>`; }).join('')}</tr>`).join('')}
+      <tr class="plan-cmt"><td style="text-align:left"><b>主管意見</b></td>${Q.map(q => `<td>${isAdm
+        ? `<textarea id="pq-${q}" rows="2" placeholder="${q} 意見">${esc(cmt(q))}</textarea><button class="btn btn-sm btn-default no-print" onclick="planQSave('${esc(name)}','${q}')">儲存</button>`
+        : (cmt(q) ? esc(cmt(q)) : '<span style="color:var(--text2)">—</span>')}</td>`).join('')}</tr>
+    </tbody></table></div></div>`;
+  }
+  // 取消的
+  const canc = mine.filter(x => x.status === 'cancelled');
+  if (canc.length && isAdm) html += `<div class="plan-cat no-print"><h4>已取消（${canc.length}，不列入統計）</h4>${canc.map(planItemHtml).join('')}</div>`;
+  html += `<div class="plan-foot">列印時間：${esc(nowStr().replace('T', ' '))}</div></div>`;
+  return html;
+}
+
+function planItemHtml(x) {
+  const isAdm = P.role === 'admin';
+  const mineEdit = (x.status === 'draft' || x.status === 'returned') && (isAdm || P.open);
+  const run = x.status === 'approved' || x.status === 'done';
+  const st = planOverdue(x) ? '<span class="plan-st overdue">逾期未完成</span>' : `<span class="plan-st ${x.status}">${PLAN_ST[x.status]}</span>`;
+  const f = P.form && P.form.id === x.id ? P.form.type : '';
+  const delays = (x.delay && x.delay.done) || [];
+  let h = `<div class="plan-item" id="pi-${x.id}">
+    <div class="top"><div class="what">${esc(x.what) || '<span style="color:var(--text2)">（還沒寫要做什麼）</span>'}</div>${st}</div>
+    <div class="meta">
+      <span>📌 ${esc(planDutyText(x))}</span>
+      <span>🗓 預計完成 <b>${esc(x.ym) || '—'}</b>${delays.length ? `（延後 ${delays.length} 次，原訂 ${esc(delays[0].from)}）` : ''}</span>
+      ${x.done ? `<span style="color:var(--green)">✅ ${esc(rocDate(x.done.date))} 完成</span>` : ''}
+    </div>
+    <div class="row"><span class="k">怎麼算完成</span><span>${esc(x.crit) || '—'}</span></div>
+    ${x.help ? `<div class="row"><span class="k">需要的協助</span><span>${esc(x.help)}</span></div>` : ''}
+    ${x.comment && ['draft', 'returned', 'submitted'].includes(x.status) ? `<div class="plan-cmtbox${x.status === 'returned' || x.status === 'draft' ? ' warn' : ''}"><b>主管意見：</b>${esc(x.comment)}</div>` : ''}
+    ${x.delay && x.delay.pending ? `<div class="plan-cmtbox warn"><b>申請延後到 ${esc(x.delay.pending.ym)}：</b>${esc(x.delay.pending.reason)}</div>` : ''}`;
+  // 按鈕
+  const b = [];
+  if (mineEdit) b.push(`<button class="btn btn-sm btn-default" onclick="planEdit('${x.id}')">修改</button>`, `<button class="btn btn-sm btn-danger" onclick="planDel('${x.id}')">刪除</button>`);
+  if (isAdm && x.status === 'submitted') b.push(`<button class="btn btn-sm btn-primary" onclick="planReview('${x.id}','approve')">核定</button>`,
+    `<button class="btn btn-sm btn-default" onclick="planEdit('${x.id}')">修改後核定</button>`, `<button class="btn btn-sm btn-default" onclick="planForm('return','${x.id}')">退回</button>`);
+  if (isAdm && (x.status === 'approved' || x.status === 'done')) b.push(`<button class="btn btn-sm btn-default" onclick="planEdit('${x.id}')">修改</button>`);
+  if (run) b.push(`<button class="btn btn-sm btn-primary" onclick="planForm('prog','${x.id}')">更新季進度</button>`);
+  if (x.status === 'approved' && !(x.delay && x.delay.pending)) b.push(`<button class="btn btn-sm btn-default" onclick="planForm('delay','${x.id}')">${isAdm ? '延後完成月份' : '申請延後'}</button>`);
+  if (isAdm && x.delay && x.delay.pending) b.push(`<button class="btn btn-sm btn-primary" onclick="planForm('dlyok','${x.id}')">審核延後</button>`);
+  if (isAdm && x.status === 'done') b.push(`<button class="btn btn-sm btn-default" onclick="planReview('${x.id}','reopen')">改回執行中</button>`);
+  if (isAdm && x.status !== 'cancelled') b.push(`<button class="btn btn-sm btn-default" style="color:var(--text2)" onclick="planForm('cancel','${x.id}')">取消此項</button>`);
+  b.push(`<button class="btn btn-sm btn-default" style="color:var(--text2)" onclick="planForm(P.form&&P.form.type==='log'&&P.form.id==='${x.id}'?null:'log','${x.id}')">📜 歷程</button>`);
+  h += `<div class="btns no-print">${b.join('')}</div>`;
+  // 內嵌表單
+  if (f === 'return' || f === 'cancel') h += `<div class="rot-form no-print">${f === 'return' ? '退回意見' : '取消原因（選填）'} <input id="pf-c" style="width:min(360px,100%)" value="${esc(x.comment)}">
+    <button class="btn btn-sm ${f === 'return' ? 'btn-primary' : 'btn-danger'}" onclick="planReview('${x.id}','${f}')">確定${f === 'return' ? '退回' : '取消'}</button> <button class="btn btn-sm btn-default" onclick="planForm(null)">返回</button></div>`;
+  if (f === 'prog') { const q = planCurQ(), g = x.prog[q] || {};
+    h += `<div class="rot-form no-print">季別 <select id="pf-q" onchange="planProgFill('${x.id}',this.value)">${['Q1', 'Q2', 'Q3', 'Q4'].map(k => `<option${k === q ? ' selected' : ''}>${k}</option>`).join('')}</select>
+      進度 <select id="pf-st">${Object.entries(PLAN_PROG).map(([k, v]) => `<option value="${k}"${(g.st || 'doing') === k ? ' selected' : ''}>${v}</option>`).join('')}</select>
+      <input id="pf-n" placeholder="一句話說明（做了什麼／卡在哪）" style="width:min(320px,100%)" value="${esc(g.note || '')}">
+      <button class="btn btn-sm btn-primary" onclick="planProgSave('${x.id}')">儲存</button> <button class="btn btn-sm btn-default" onclick="planForm(null)">取消</button>
+      <div class="hint">選「已完成」這一項就算完成；每季更新一次</div></div>`; }
+  if (f === 'delay') h += `<div class="rot-form no-print">延後到 <input id="pf-ym" placeholder="116/09" style="width:80px"> 原因 <input id="pf-r" style="width:min(300px,100%)">
+    <button class="btn btn-sm btn-primary" onclick="planDelay('${x.id}')">${isAdm ? '確定延後' : '送出申請'}</button> <button class="btn btn-sm btn-default" onclick="planForm(null)">取消</button>
+    ${isAdm ? '' : '<div class="hint">主管核准後才會改成新的完成月份</div>'}</div>`;
+  if (f === 'dlyok') h += `<div class="rot-form no-print">核准延後到 <input id="pf-ym" value="${esc(x.delay.pending.ym)}" style="width:80px">（可修改）
+    <button class="btn btn-sm btn-primary" onclick="planDelayReview('${x.id}','approve')">核准</button> <button class="btn btn-sm btn-danger" onclick="planDelayReview('${x.id}','reject')">駁回</button>
+    <button class="btn btn-sm btn-default" onclick="planForm(null)">返回</button></div>`;
+  if (f === 'log') h += `<div class="plan-log">${(x.log || []).slice().reverse().map(l => `<div><span>${esc(String(l.t).replace('T', ' '))}</span> ${esc(l.by)}：${esc(l.text)}</div>`).join('') || '沒有紀錄'}</div>`;
+  return h + `</div>`;
+}
+function planForm(type, id) { P.form = type ? { type, id } : null; renderPlan(); }
+function planProgFill(id, q) {
+  const x = P.items.find(i => i.id === id), g = (x && x.prog[q]) || {};
+  document.getElementById('pf-st').value = g.st || 'doing';
+  document.getElementById('pf-n').value = g.note || '';
+}
+
+// ── 新增／修改（彈窗）────────────────────────
+function planEdit(id, name) {
+  const x = id ? P.items.find(i => i.id === id) : { id:'', name, cat:'', gid:'', gidNote:'', what:'', ym:'', crit:'', help:'', comment:'', status:'draft' };
+  if (!x) return;
+  P.edit = JSON.parse(JSON.stringify(x));
+  planEditRender();
+  document.getElementById('plan-modal').classList.add('active');
+}
+function planDutyOpts(e) {
+  const rel = (P.rel && P.rel[e.name]) || { cur:[], past:[] };
+  const isAdm = P.role === 'admin';
+  const o = (v, t) => `<option value="${v}"${e.gid === v ? ' selected' : ''}>${esc(t)}</option>`;
+  let h = o('', '請選擇');
+  if (e.cat === 'grow') {
+    h += o('GENERAL', '一般能力（AI、證照、院內課程…）');
+    const groups = {};
+    P.duties.filter(d => isAdm || !rel.cur.includes(d.id)).forEach(d => (groups[d.group] = groups[d.group] || []).push(d));
+    h += Object.entries(groups).map(([g, ds]) => `<optgroup label="想學：${esc(g)}">${ds.map(d => o(d.id, `${d.id} ${d.name}${rel.past.includes(d.id) ? '（曾負責）' : ''}`)).join('')}</optgroup>`).join('');
+  } else {
+    const ds = P.duties.filter(d => isAdm || rel.cur.includes(d.id));
+    h += `<optgroup label="${isAdm ? '業務大項' : '我目前負責的業務'}">${ds.map(d => o(d.id, `${d.id} ${d.name}`)).join('')}</optgroup>`;
+    h += o('COMMON', '部門共同事務') + o('OTHER', '其他（目前沒有對應的業務，請寫說明）');
+  }
+  return h;
+}
+function planEditRender() {
+  const e = P.edit, isAdm = P.role === 'admin';
+  const canApprove = isAdm && ['draft', 'submitted', 'returned'].includes(e.status);
+  document.getElementById('plan-modal-box').innerHTML = `
+    <h2>${e.id ? '修改計畫' : '新增計畫'}${isAdm ? `<span style="font-size:13px;color:var(--text2);margin-left:8px">${esc(e.name)}</span>` : ''}</h2>
+    ${e.comment && !isAdm ? `<div class="plan-cmtbox warn" style="margin-bottom:12px"><b>主管意見：</b>${esc(e.comment)}</div>` : ''}
+    <div class="modal-form-row"><label>類別 *</label>
+      <div class="plan-cats">${Object.entries(PLAN_CAT).map(([k, v]) => `<label class="${e.cat === k ? 'on' : ''}"><input type="radio" name="pe-cat" value="${k}"${e.cat === k ? ' checked' : ''} onchange="planEditCat('${k}')"> ${PLAN_CAT_ICON[k]} ${v}</label>`).join('')}</div>
+      <div class="deadline-hint">${e.cat === 'grow' ? '能力發展：選一項想學、還沒負責的業務（會標在業務地圖上），或一般能力' : e.cat ? '只寫今年要改善或新做的事，例行照做的不用寫' : ''}</div></div>
+    ${e.cat ? `<div class="modal-form-row"><label>對應業務 *</label><select id="pe-gid" onchange="P.edit.gid=this.value;planEditRender()">${planDutyOpts(e)}</select></div>
+    ${e.gid === 'OTHER' ? `<div class="modal-form-row"><label>說明 *（例：新業務，尚未確認）</label><input id="pe-gidNote" value="${esc(e.gidNote)}"></div>` : ''}` : ''}
+    <div class="modal-form-row"><label>要做什麼 *</label><textarea id="pe-what" placeholder="一兩句話，例：課程海報改用 AI 製作">${esc(e.what)}</textarea></div>
+    <div class="modal-form-2col">
+      <div class="modal-form-row"><label>預計完成 *（民國年/月）</label><input id="pe-ym" placeholder="${planRoc(P.year)}/06" value="${esc(e.ym)}"></div>
+      <div class="modal-form-row"><label>需要的協助（選填）</label><input id="pe-help" value="${esc(e.help)}"></div>
+    </div>
+    <div class="modal-form-row"><label>怎麼算完成 *（交得出來的東西）</label><textarea id="pe-crit" placeholder="例：送審一次、上線、辦完 2 場、交出一份檔案">${esc(e.crit)}</textarea></div>
+    ${isAdm ? `<div class="modal-form-row"><label>主管意見</label><input id="pe-comment" value="${esc(e.comment)}"></div>` : ''}
+    <div class="modal-actions">
+      <button class="btn btn-default" onclick="planEditClose()">取消</button>
+      <button class="btn ${canApprove ? 'btn-default' : 'btn-primary'}" onclick="planEditSave(false)">${isAdm || e.id ? '儲存' : '存成草稿'}</button>
+      ${canApprove ? `<button class="btn btn-primary" onclick="planEditSave(true)">儲存並核定</button>` : ''}
+    </div>`;
+}
+function planEditGrab() {
+  const v = id => { const el = document.getElementById(id); return el ? el.value : undefined; };
+  ['what', 'ym', 'crit', 'help', 'gidNote', 'comment'].forEach(k => { const x = v('pe-' + k); if (x !== undefined) P.edit[k] = x; });
+}
+function planEditCat(c) { planEditGrab(); if (P.edit.cat !== c) { P.edit.cat = c; P.edit.gid = ''; } planEditRender(); }
+function planEditClose() { document.getElementById('plan-modal').classList.remove('active'); P.edit = null; }
+async function planEditSave(approve) {
+  planEditGrab();
+  const e = P.edit;
+  const f = { cat:e.cat, gid:e.gid, gidNote:e.gid === 'OTHER' ? e.gidNote : '', what:e.what, ym:e.ym, crit:e.crit, help:e.help };
+  if (!e.what.trim()) { toast('請寫要做什麼'); return; }
+  let o;
+  if (approve) o = Object.assign({ type:'review', id:e.id, act:'approve', comment:e.comment }, f);
+  else o = Object.assign({ type:'save', id:e.id || undefined, name:e.name }, f, P.role === 'admin' ? { comment:e.comment } : {});
+  if (approve && !e.id) { // 新增並核定：先存再核定
+    const ok = await planOp(Object.assign({ type:'save', name:e.name, comment:e.comment }, f));
+    if (!ok) return;
+    const nx = P.items.filter(x => x.name === e.name && x.what === e.what.trim()).pop();
+    o.id = nx && nx.id;
+  }
+  const ok = await planOp(o, approve ? '已核定' : '已儲存');
+  if (ok) planEditClose();
+}
+
+// ── 其他動作 ─────────────────────────────────
+async function planDel(id) { if (confirm('刪除這一項計畫？')) await planOp({ type:'del', id }, '已刪除'); }
+async function planSubmit(name) {
+  if (!confirm('送出後就不能自己修改，要等主管審核。確定送出？')) return;
+  await planOp({ type:'submit', name }, '已送主管審核');
+}
+async function planReview(id, act) {
+  const c = document.getElementById('pf-c');
+  const o = { type:'review', id, act };
+  if (c) o.comment = c.value.trim();
+  if (act === 'return' && !o.comment) { toast('退回請寫意見'); return; }
+  await planOp(o, { approve:'已核定', 'return':'已退回', cancel:'已取消', reopen:'已改回執行中' }[act]);
+}
+async function planProgSave(id) {
+  await planOp({ type:'progress', id, q:document.getElementById('pf-q').value, st:document.getElementById('pf-st').value, note:document.getElementById('pf-n').value }, '進度已更新');
+}
+async function planDelay(id) {
+  await planOp({ type:'delayReq', id, ym:document.getElementById('pf-ym').value.trim(), reason:document.getElementById('pf-r').value.trim() }, P.role === 'admin' ? '已延後' : '已送出延後申請');
+}
+async function planDelayReview(id, act) {
+  const ym = document.getElementById('pf-ym');
+  await planOp({ type:'delayReview', id, act, ym: ym ? ym.value.trim() : '' }, act === 'approve' ? '已核准延後' : '已駁回');
+}
+async function planQSave(name, q) {
+  await planOp({ type:'qComment', name, q, text:document.getElementById('pq-' + q).value }, `${q} 意見已儲存`);
+}
+function planPrint() {
+  document.body.classList.add('print-plan');
+  window.print();
+  setTimeout(() => document.body.classList.remove('print-plan'), 500);
 }
 
 
