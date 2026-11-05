@@ -2585,14 +2585,17 @@ function rotApply(d) {
   {
     R.open = !!d.open;
     if (!d.open) { R.loaded = false; R.err = ''; R.role = d.role; return; }
+    d.subs = d.subs || [];
     Object.assign(R, {
       isPublic: !!d.isPublic,
       loaded:true, err:'', role:d.role, me:d.me, pass:d.passScore,
       staleDays:d.staleDays || 183, highDiff:d.highDiff || 7, today:d.today || todayStr(),
       people:d.people, items:d.items, subs:d.subs, hist:d.hist || [], scores:d.scores,
       sublog:d.sublog || [], round:d.round || { name:'', open:false, at:'' },
+      subsAll:d.subs, 
       common:d.common || [], dash:d.dash || []
     });
+    R.subs = R.subsAll.filter(x => !x.off);   // 停用的細項不顯示、不列入統計（管理員在「新增／停用的細項」看得到）
     if (R.role !== 'admin') { R.person = R.role === 'member' ? R.me : ''; if (R.view !== 'map') R.view = 'map'; }
     else if (R.person && !R.people.some(p => p.name === R.person)) R.person = '';
     _rotBy = {};
@@ -2735,9 +2738,9 @@ function renderRot(keepFilters) {
   } else {
     html += rotAdminOverviewHtml();
     const tab = (v, label) => `<button class="due-tab${R.view === v ? ' active' : ''}" onclick="rotSetView('${v}')">${label}</button>`;
-    html += `<div class="rot-viewbar"><div class="due-tabs">${tab('map','🗺 業務地圖')}${tab('matrix','🧮 評分總表')}${tab('todo',`📝 歷程待補（${rotTodo().length}）`)}${tab('help',`🆘 需要協助（${rotHelpRows().length}）`)}</div>
+    html += `<div class="rot-viewbar"><div class="due-tabs">${tab('map','🗺 業務地圖')}${tab('matrix','🧮 評分總表')}${tab('todo',`📝 歷程待補（${rotTodo().length}）`)}${tab('help',`🆘 需要協助（${rotHelpRows().length}）`)}${tab('changes',`🆕 新增／停用的細項（${rotChangesRows().length}）`)}</div>
       ${R.view === 'matrix' ? rotLegend() : ''}</div>`;
-    html += R.view === 'matrix' ? rotMatrixHtml() : R.view === 'todo' ? rotTodoHtml() : R.view === 'help' ? rotHelpHtml() : rotMapHtml(null);
+    html += R.view === 'matrix' ? rotMatrixHtml() : R.view === 'todo' ? rotTodoHtml() : R.view === 'help' ? rotHelpHtml() : R.view === 'changes' ? rotChangesHtml() : rotMapHtml(null);
   }
   body.innerHTML = html;
 }
@@ -2948,7 +2951,7 @@ function rotMySubsHtml(name) {
         ${open && self && !doneNow && x.diff != null ? `<button class="btn btn-sm btn-default" title="難度和需要協助都跟上次一樣" onclick="rotSubSave('${x.id}',true)">沿用上次</button>` : ''}
         ${open && self && doneNow ? '<div style="font-size:11px;color:var(--green);margin-top:4px">✓ 本輪已填</div>' : ''}</td>`;
     else h += `<td style="font-weight:700;${isHigh(x) ? 'color:var(--red)' : ''}">${x.diff != null ? x.diff : '—'}${rotSubTrend(x)}</td><td style="white-space:pre-wrap">${esc(x.help) || '—'}${rotActTag(x)}</td><td></td>`;
-    h += `<td><button class="btn btn-sm btn-default" style="color:var(--text2)" onclick="R.subLogOpen=${logOpen ? "''" : `'${x.id}'`};renderRot(true)">📜 ${rs.length}</button></td></tr>`;
+    h += `<td style="white-space:nowrap">${rotSubMngBtns(x)}<button class="btn btn-sm btn-default" style="color:var(--text2)" onclick="R.subLogOpen=${logOpen ? "''" : `'${x.id}'`};renderRot(true)">📜 ${rs.length}</button></td></tr>`;
     if (logOpen) h += `<tr><td colspan="6"><div class="plan-log">${(R.sublog || []).filter(l => l.id === x.id).slice().reverse()
       .map(l => `<div><span>${esc(String(l.t).replace('T', ' '))}</span>　<b>${esc(l.round)}</b>　難度 ${l.diff != null ? l.diff : '—'}　${esc(l.help) || '（未寫需要協助）'}${l.by && l.by !== l.name ? `　<span style="color:var(--text2)">（${esc(l.by)}）</span>` : ''}</div>`).join('') || '沒有紀錄'}</div></td></tr>`;
     return h;
@@ -2960,6 +2963,7 @@ function rotMySubsHtml(name) {
       <span style="background:var(--surface2);color:var(--text2);border-radius:10px;padding:1px 8px;font-size:11px;">${mine.length} 項・≥${R.highDiff} 分 ${mine.filter(isHigh).length} 項</span>
       <label style="margin-left:auto;font-weight:400;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" ${onlyHigh ? 'checked' : ''} style="width:auto" onchange="R.subOnlyHigh=this.checked?'${esc(name)}':'';renderRot(true)"> 只看 ${R.highDiff} 分以上</label></h5>
     ${roundBar}
+    ${(isAdm || self) && R.items.some(i => i.owners.includes(name)) ? (R.subForm === '__mine' ? rotSubAddForm(null, name) : `<div style="margin-bottom:8px"><button class="btn btn-sm btn-default" onclick="R.subForm='__mine';renderRot(true)">＋ 新增細項</button></div>`) : ''}
     <div style="font-size:12px;color:var(--text2);margin-bottom:8px">自評難度 1～10（可填 0.5）；${R.highDiff} 分以上一定要寫「需要協助」；「上次 → 最新」是跟上一輪比；📜 是每一次的紀錄</div>
     <div style="overflow-x:auto"><table class="rot-tbl rot-subtbl"><thead><tr><th>業務</th><th>細項</th><th>自評難度</th><th>需要協助</th><th></th><th>紀錄</th></tr></thead>
     <tbody>${list.map(row).join('') || '<tr><td colspan="6" style="color:var(--text2)">沒有符合的細項</td></tr>'}</tbody></table></div>
@@ -2970,6 +2974,82 @@ function rotRecheck(x) {
   const rd = R.round || {};
   if (!x.act || x.act === 'redo' || !rd.at || !x.actAt || x.actAt >= rd.at) return false;
   return x.diff != null && x.diff >= R.highDiff && (R.sublog || []).some(l => l.id === x.id && l.round === rd.name);
+}
+// ── 新增／改名／停用細項 ─────────────────────
+function rotSubMngBtns(s) {
+  return `<button class="btn btn-sm btn-default" onclick="rotSubRename('${s.id}')">改名</button> <button class="btn btn-sm btn-default" style="color:var(--red)" onclick="rotSubOff('${s.id}',1)">停用</button> `;
+}
+// it＝在大項明細裡新增；it 為 null＝在個人頁新增（先選大項）
+function rotSubAddForm(it, name) {
+  const mineItems = it ? [it] : R.items.filter(i => i.owners.includes(name));
+  const g = it ? it.id : (R.subFormGid && mineItems.some(i => i.id === R.subFormGid) ? R.subFormGid : mineItems[0].id);
+  const cur = R.items.find(i => i.id === g);
+  const owners = cur.owners;
+  const defOwner = R.role === 'admin' ? (name && owners.includes(name) ? name : owners[0]) : R.me;
+  return `<div class="rot-form" style="display:block;margin:8px 0">
+    <div style="font-weight:600;margin-bottom:6px">新增細項${it ? '' : `：<select id="sa-gid" onchange="R.subFormGid=this.value;renderRot(true)">${mineItems.map(i => `<option value="${i.id}"${i.id === g ? ' selected' : ''}>${i.id} ${esc(i.name)}</option>`).join('')}</select>`}</div>
+    <input type="hidden" id="sa-gid-h" value="${g}">
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+      <input id="sa-name" placeholder="業務項目（必填）" style="flex:1;min-width:220px">
+      負責人 <select id="sa-owner">${owners.map(o => `<option${o === defOwner ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select>
+      自評難度 <input id="sa-diff" type="number" min="1" max="10" step="0.5" style="width:64px">
+    </div>
+    <textarea id="sa-help" rows="2" placeholder="需要協助（自評 ≥${R.highDiff} 必填）" style="width:100%;margin-top:6px;font-family:inherit;font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:6px"></textarea>
+    <div style="margin-top:6px;display:flex;gap:6px"><button class="btn btn-sm btn-primary" onclick="rotSubAddSubmit()">新增</button><button class="btn btn-sm btn-default" onclick="R.subForm='';R.openGid&&document.getElementById('rot-modal').classList.contains('active')?rotOpen(R.openGid):renderRot(true)">取消</button>
+      <span class="hint" style="flex-basis:auto">同一件事不要拆太細；新增後主管看得到</span></div>
+  </div>`;
+}
+const ROT_SUB_ERR = { 'help required':'自評 7 分以上請寫需要協助', 'bad diff':'自評難度請填 1～10（可 0.5）', 'missing name':'請填業務項目', forbidden:'只有這項業務的負責人或主管可以操作', 'bad owner':'負責人要是這項業務的負責人', closed:'業務地圖尚未開放', 'round closed':'目前沒有開放自評' };
+async function rotSubCall(params, msg) {
+  try {
+    const r = await apiGet(params);
+    if (!r.ok) throw new Error(r.error);
+    rotApply(r.data);
+    renderRot(true);
+    if (R.openGid && document.getElementById('rot-modal').classList.contains('active')) rotOpen(R.openGid);
+    toast(msg); return true;
+  } catch (e) { toast(ROT_SUB_ERR[e.message] || '儲存失敗：' + e.message, 3500); return false; }
+}
+async function rotSubAddSubmit() {
+  const v = id => (document.getElementById(id) || {}).value || '';
+  const p = { action:'rotSubAdd', gid: v('sa-gid-h'), name: v('sa-name').trim(), owner: v('sa-owner'), diff: v('sa-diff').trim(), help: v('sa-help').trim() };
+  if (!p.name) { toast('請填業務項目'); return; }
+  if (!p.diff) { toast('請填自評難度'); return; }
+  if (Number(p.diff) >= R.highDiff && rotNoHelp(p.help)) { toast(`自評 ${R.highDiff} 分以上請寫需要協助`, 3500); return; }
+  if (await rotSubCall(p, '已新增細項')) R.subForm = '';
+  renderRot(true);
+}
+async function rotSubRename(id) {
+  const x = R.subsAll.find(s => s.id === id);
+  const nm = (prompt('細項名稱：', x.name) || '').trim();
+  if (!nm || nm === x.name) return;
+  await rotSubCall({ action:'rotSubSave', id, name:nm }, '已改名');
+}
+async function rotSubOff(id, off) {
+  const x = R.subsAll.find(s => s.id === id);
+  if (off && !confirm(`停用「${x.name}」？停用後不再顯示、不列入統計，紀錄會保留，主管可以恢復。`)) return;
+  await rotSubCall({ action:'rotSubSave', id, off: off ? '1' : '0' }, off ? '已停用' : '已恢復');
+}
+// 管理員：新增／停用的細項
+function rotChangesRows() {
+  const out = [];
+  (R.subsAll || []).forEach(x => {
+    if (x.addBy) out.push({ t:x.addAt, kind:'add', by:x.addBy, x });
+    if (x.off) out.push({ t:x.offAt, kind:'off', by:x.offBy, x });
+  });
+  return out.sort((a, b) => a.t < b.t ? 1 : -1);
+}
+function rotChangesHtml() {
+  const rows = rotChangesRows();
+  const it = gid => R.items.find(i => i.id === gid) || { name:'' };
+  return `<div style="font-size:12px;color:var(--text2);margin-bottom:8px">同仁自己新增或停用的細項（不用核准）。拆得太細的可以停用；停用的可以恢復</div>
+    <div style="overflow-x:auto"><table class="rot-tbl"><thead><tr><th>時間</th><th>動作</th><th>誰</th><th>業務</th><th>細項</th><th>負責人</th><th>自評難度</th><th></th></tr></thead><tbody>
+    ${rows.map(r => `<tr${r.x.off && r.kind === 'add' ? ' style="opacity:.55"' : ''}><td style="white-space:nowrap">${esc(String(r.t).replace('T', ' '))}</td>
+      <td>${r.kind === 'add' ? '<span class="plan-st approved">新增</span>' : '<span class="plan-st overdue">停用</span>'}</td><td>${esc(r.by)}</td>
+      <td><a href="javascript:void 0" onclick="rotOpen('${r.x.gid}')" style="color:inherit"><span style="color:var(--text2);font-size:11px">${esc(r.x.gid)}</span> ${esc(it(r.x.gid).name)}</a></td>
+      <td>${esc(r.x.name)}</td><td>${esc(r.x.owner)}</td><td>${r.x.diff != null ? r.x.diff : '—'}</td>
+      <td style="white-space:nowrap">${r.x.off ? (r.kind === 'off' ? `<button class="btn btn-sm btn-primary" onclick="rotSubOff('${r.x.id}',0)">恢復</button>` : '<span style="font-size:11px;color:var(--text2)">已停用</span>') : `<button class="btn btn-sm btn-default" onclick="rotSubRename('${r.x.id}')">改名</button> <button class="btn btn-sm btn-default" style="color:var(--red)" onclick="rotSubOff('${r.x.id}',1)">停用</button>`}</td></tr>`).join('') || '<tr><td colspan="8" style="color:var(--text2)">目前沒有同仁新增或停用細項</td></tr>'}
+    </tbody></table></div>`;
 }
 function rotActTag(x) {
   if (!x.act) return '';
@@ -3309,9 +3389,13 @@ function rotOpen(gid) {
   }
 
   // 細項
-  html += `<div class="rot-sec"><h4>細項（${subs.length}）</h4>${subs.length ? `<table class="rot-tbl"><thead><tr><th>編號</th><th>業務項目</th><th>負責人</th>${showDiff ? '<th>自評難度</th><th>需要協助</th>' : ''}</tr></thead><tbody>
-    ${subs.map(s => `<tr><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${esc(s.owner)}</td>${showDiff ? `<td style="${s.diff >= R.highDiff ? 'color:var(--red);font-weight:700' : ''}">${s.diff != null ? s.diff : '—'}</td><td style="white-space:pre-wrap">${s.diff != null && s.diff >= R.highDiff && rotNoHelp(s.help) ? '<span style="color:var(--red);font-weight:600">未填（自評 ≥' + R.highDiff + ' 必填）</span>' : (esc(s.help) || '—')}</td>` : ''}</tr>`).join('')}
-    </tbody></table>` : '<div style="font-size:12px;color:var(--text2)">沒有細項</div>'}</div>`;
+  const canAddSub = isAdm || (R.me && it.owners.includes(R.me));
+  const canMng = s => isAdm || (R.me && rotOwnersOf(s).includes(R.me));
+  const anyMng = subs.some(canMng);
+  html += `<div class="rot-sec"><h4>細項（${subs.length}）</h4>${subs.length ? `<table class="rot-tbl"><thead><tr><th>編號</th><th>業務項目</th><th>負責人</th>${showDiff ? '<th>自評難度</th><th>需要協助</th>' : ''}${anyMng ? '<th></th>' : ''}</tr></thead><tbody>
+    ${subs.map(s => `<tr><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${esc(s.owner)}</td>${showDiff ? `<td style="${s.diff >= R.highDiff ? 'color:var(--red);font-weight:700' : ''}">${s.diff != null ? s.diff : '—'}</td><td style="white-space:pre-wrap">${s.diff != null && s.diff >= R.highDiff && rotNoHelp(s.help) ? '<span style="color:var(--red);font-weight:600">未填（自評 ≥' + R.highDiff + ' 必填）</span>' : (esc(s.help) || '—')}</td>` : ''}${anyMng ? `<td style="white-space:nowrap">${canMng(s) ? rotSubMngBtns(s) : ''}</td>` : ''}</tr>`).join('')}
+    </tbody></table>` : '<div style="font-size:12px;color:var(--text2)">沒有細項</div>'}
+    ${canAddSub ? (R.subForm === gid ? rotSubAddForm(it) : `<div style="margin-top:8px"><button class="btn btn-sm btn-default" onclick="R.subForm='${gid}';rotOpen('${gid}')">＋ 新增細項</button></div>`) : ''}</div>`;
 
   rotShowModal(html, isAdm);
   const sel = document.getElementById('rot-f-to');
@@ -3373,7 +3457,7 @@ function rotCloseModal() {
   const n = rotDirtyCount();
   if (n && !confirm(`還有 ${n} 項修改沒有儲存，確定要關閉並放棄嗎？`)) return;
   document.getElementById('rot-modal').classList.remove('active');
-  R.openGid = null; R.form = null; rotDraftReset();
+  R.openGid = null; R.form = null; R.subForm = ''; rotDraftReset();
 }
 function rotDiscard() {
   if (!confirm('放棄所有尚未儲存的修改？')) return;
