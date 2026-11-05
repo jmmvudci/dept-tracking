@@ -696,6 +696,7 @@ table.delay-table.plan-qtbl th.cur{background:#dbeafe;color:#1d4ed8;}
         <option value="meeting">教研部內部會議簡報</option>
         <option value="meetingtrack">會議追蹤</option>
       </select>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="mx-hide-done" checked onchange="renderMatrix()" style="accent-color:var(--accent);"> 隱藏已完成<span id="mx-hidden-n" style="color:var(--text2);font-size:12px;"></span></label>
     </div>
     <div class="matrix-wrap" id="matrix-container"></div>
   </div>
@@ -725,6 +726,7 @@ table.delay-table.plan-qtbl th.cur{background:#dbeafe;color:#1d4ed8;}
           <option value="meeting">教研部內部會議簡報</option>
           <option value="meetingtrack">會議追蹤</option>
         </select>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="it-hide-done" checked onchange="renderItems()" style="accent-color:var(--accent);"> 隱藏已完成<span id="it-hidden-n" style="color:var(--text2);font-size:12px;"></span></label>
       </div>
     </div>
     <div class="items-table-wrap">
@@ -1623,10 +1625,11 @@ function renderMatrix() {
   let items   = visibleItems();
   if (ft) items = items.filter(it=>it.type===ft);
   if (fp) items = items.filter(it=>it.members.includes(fp));
+  items = applyHideDone('mx', items, fp);
 
   if (!items.length || !members.length) {
     document.getElementById('matrix-container').innerHTML =
-      '<div style="padding:40px;text-align:center;color:var(--text2)">無資料</div>'; return;
+      `<div style="padding:40px;text-align:center;color:var(--text2)">${document.getElementById('mx-hide-done').checked ? '沒有未完成的任務（取消勾選「隱藏已完成」可看全部）' : '無資料'}</div>`; return;
   }
 
   const typeOrder = ['routine','temp','tempq','project','collab','minutes','trial','doc','meeting','meetingtrack','agenda','slides'];
@@ -1980,12 +1983,25 @@ function onTypeChange() {
 // ══════════════════════════════════════════════
 let _editingItemId = null;
 
+// 已完成＝負責人全部是已完成／晚交／N/A（有篩人員時只看那個人）
+function isItemDone(it, fp) {
+  const ms = fp ? [fp] : it.members;
+  return ms.length > 0 && ms.every(m => ['done', 'late', 'na'].includes(getEffStatus(it.id, m, it.deadline, it.deadtime)));
+}
+function applyHideDone(pid, items, fp) {
+  const cb = document.getElementById(pid + '-hide-done'), lab = document.getElementById(pid + '-hidden-n');
+  if (!cb || !cb.checked) { if (lab) lab.textContent = ''; return items; }
+  const keep = items.filter(it => !isItemDone(it, fp));
+  if (lab) lab.textContent = items.length - keep.length ? `（已隱藏 ${items.length - keep.length} 項）` : '';
+  return keep;
+}
 function renderItems() {
   const fp = document.getElementById('it-person-filter').value;
   const ft = document.getElementById('it-type-filter').value;
   let items = visibleItems();
   if (fp) items = items.filter(it=>it.members.includes(fp));
   if (ft) items = items.filter(it=>it.type===ft);
+  items = applyHideDone('it', items, fp);
 
   document.getElementById('items-tbody').innerHTML = items.map(it => {
     const meta = TYPE_META[it.type] || {};
@@ -2001,7 +2017,7 @@ function renderItems() {
         <button class="btn btn-sm btn-danger" onclick="deleteItem('${it.id}')">刪除</button>` : ''}
       </td>
     </tr>`;
-  }).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:30px">尚無任務</td></tr>';
+  }).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:30px">${document.getElementById('it-hide-done').checked && visibleItems().length ? '沒有未完成的任務（取消勾選「隱藏已完成」可看全部）' : '尚無任務'}</td></tr>`;
 }
 
 function openItemModal(id) {
