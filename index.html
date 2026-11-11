@@ -645,7 +645,8 @@ table.delay-table.plan-qtbl th.cur{background:#dbeafe;color:#1d4ed8;}
       </div>
     </div>
     <div id="delay-section" style="display:none;margin-top:24px;">
-      <div class="section-title" style="color:var(--red)">⚠️ 延遲率統計（管理員限定）</div>
+      <div class="section-title" style="color:var(--red)">⚠️ 延遲率統計・本期 <span id="dl-period-label"></span>（管理員限定）</div>
+      <div style="font-size:12px;color:var(--text2);margin:-6px 0 10px;">統計期間每年 11/1～隔年 10/31，依任務截止日歸期；過去的期間在下方「歷年查詢」</div>
       <div class="filter-bar" style="margin-bottom:12px;">
         <label>人員：</label>
         <select id="dl-person-filter" onchange="renderDelayTable()">
@@ -670,8 +671,15 @@ table.delay-table.plan-qtbl th.cur{background:#dbeafe;color:#1d4ed8;}
         </label>
       </div>
       <div class="delay-table-wrap"><table class="delay-table" id="delay-table"></table></div>
-      <div class="section-title" style="margin-top:24px;">📌 交辦與專案件數（管理員限定，可作年終統計）</div>
+      <div class="section-title" style="margin-top:24px;">📌 交辦與專案件數・本期（管理員限定，可作年終統計）</div>
       <div class="delay-table-wrap"><table class="delay-table" id="assign-table"></table></div>
+      <div class="section-title" style="margin-top:28px;">📂 歷年查詢</div>
+      <div class="filter-bar" style="margin-bottom:12px;">
+        <label>期間：</label>
+        <select id="dl-hist-period" onchange="renderDelayHistory()"></select>
+        <span style="font-size:12px;color:var(--text2)">上方的人員、任務類型、只顯示有延遲的人篩選也適用</span>
+      </div>
+      <div id="dl-hist-body"></div>
     </div>
   </div>
 
@@ -1256,8 +1264,31 @@ function getEffStatus(itemId, memberName, deadline, deadtime) {
 // ══════════════════════════════════════════════
 //  DELAY CALC
 // ══════════════════════════════════════════════
-function calcDelay(memberName) {
-  const with_dl = G.items.filter(it => it.deadline && it.members.includes(memberName));
+// ── 統計期間：每年 11/1～隔年 10/31（key＝起始西元年）──
+function periodKeyOf(dateStr) {
+  if (!dateStr) return null;
+  const y = Number(dateStr.slice(0, 4)), m = Number(dateStr.slice(5, 7));
+  return m >= 11 ? y : y - 1;
+}
+function periodLabel(k) { return `${k - 1911}/11/01～${k - 1910}/10/31`; }
+function periodShort(k) { return `${k - 1911}/11～${k - 1910}/10`; }
+function curPeriodKey() { return periodKeyOf(todayStr()); }
+// 任務歸期日期：有截止日用截止日；免追蹤交辦（沒有截止日）用完成日，再不行用建立時間
+function itemPeriodDate(it) {
+  if (it.deadline) return it.deadline;
+  const done = it.members.map(m => (getEntry(it.id, m) || {}).completedAt).filter(Boolean).sort()[0];
+  if (done) return String(done).slice(0, 10);
+  const ts = Number(String(it.id).replace(/^item_/, ''));
+  return ts > 1e12 ? new Date(ts).toISOString().slice(0, 10) : '';
+}
+function itemInPeriod(it, k) { return periodKeyOf(itemPeriodDate(it)) === k; }
+function allPeriodKeys() {
+  const ks = new Set(G.items.map(it => periodKeyOf(itemPeriodDate(it))).filter(k => k != null));
+  return [...ks].sort((a, b) => b - a);
+}
+function calcDelay(memberName, k) {
+  if (k === undefined) k = curPeriodKey();
+  const with_dl = G.items.filter(it => it.deadline && it.members.includes(memberName) && itemInPeriod(it, k));
   if (!with_dl.length) return null;
   let delayed = 0;
   with_dl.forEach(it => {
@@ -1342,7 +1373,7 @@ function renderOverview() {
       const dl = calcDelay(m.name);
       if (dl) {
         const cls = dl.rate>30?'high':dl.rate>10?'mid':'low';
-        dlHtml = `<div class="delay-badge ${cls}">延遲率 ${dl.rate}%</div>`;
+        dlHtml = `<div class="delay-badge ${cls}" title="本期 ${periodLabel(curPeriodKey())}">本期延遲率 ${dl.rate}%</div>`;
       }
     }
     return `<div class="person-card" onclick="filterByPerson('${m.name}')">
@@ -1358,13 +1389,38 @@ function renderOverview() {
 
 function renderDelayTable() {
   if (!isAdmin()) return;
+  const k = curPeriodKey();
+  const lab = document.getElementById('dl-period-label');
+  if (lab) lab.textContent = periodLabel(k);
+  document.getElementById('delay-table').innerHTML = delayTableHtml(k);
+  renderAssignTable(document.getElementById('dl-person-filter')?.value || '', k, 'assign-table');
+  renderDelayHistory();
+}
+// 歷年查詢：本期以前、有任務資料的期間
+function renderDelayHistory() {
+  const sel = document.getElementById('dl-hist-period'), body = document.getElementById('dl-hist-body');
+  if (!sel || !body) return;
+  const cur = curPeriodKey();
+  const ks = allPeriodKeys().filter(k => k < cur);
+  const keep = sel.value;
+  sel.innerHTML = ks.length ? ks.map(k => `<option value="${k}">${periodShort(k)}（${periodLabel(k)}）</option>`).join('') : '<option value="">尚無過去期間的資料</option>';
+  if (keep && ks.includes(Number(keep))) sel.value = keep;
+  if (!ks.length) { body.innerHTML = '<div style="font-size:13px;color:var(--text2);padding:8px 0">尚無過去期間的資料</div>'; return; }
+  const k = Number(sel.value);
+  body.innerHTML = `<div style="font-weight:600;margin:4px 0 8px">延遲率（${periodLabel(k)}）</div>
+    <div class="delay-table-wrap"><table class="delay-table">${delayTableHtml(k)}</table></div>
+    <div style="font-weight:600;margin:16px 0 8px">交辦與專案件數（${periodLabel(k)}）</div>
+    <div class="delay-table-wrap"><table class="delay-table" id="assign-table-hist"></table></div>`;
+  renderAssignTable(document.getElementById('dl-person-filter')?.value || '', k, 'assign-table-hist');
+}
+function delayTableHtml(k) {
   const fp         = document.getElementById('dl-person-filter')?.value || '';
   const ft         = document.getElementById('dl-type-filter')?.value   || '';
   const onlyDelay  = document.getElementById('dl-only-delayed')?.checked || false;
 
-  // calcDelay but filtered by type
+  // calcDelay but filtered by type and period
   function calcDelayFiltered(memberName) {
-    let withDl = G.items.filter(it => it.deadline && it.members.includes(memberName));
+    let withDl = G.items.filter(it => it.deadline && it.members.includes(memberName) && itemInPeriod(it, k));
     if (ft) withDl = withDl.filter(it => it.type === ft);
     if (!withDl.length) return null;
     let delayed = 0;
@@ -1413,18 +1469,17 @@ function renderDelayTable() {
   }).join('');
 
   const isEmpty = !rows.replace(/<[^>]+>/g,'').trim();
-  document.getElementById('delay-table').innerHTML =
-    `<thead><tr><th>姓名</th><th>任務類型</th><th>延遲筆數／項目</th><th>有截止日任務</th><th>延遲率</th></tr></thead>
+  return `<thead><tr><th>姓名</th><th>任務類型</th><th>延遲筆數／項目</th><th>有截止日任務</th><th>延遲率</th></tr></thead>
      <tbody>${isEmpty ? '<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:20px">無符合條件的資料</td></tr>' : rows}</tbody>`;
-  renderAssignTable(fp);
 }
 
 // 每人交辦／專案件數（一筆交辦 2 位負責人，各算 1 件）
-function renderAssignTable(fp) {
-  const el = document.getElementById('assign-table');
+function renderAssignTable(fp, k, elId) {
+  const el = document.getElementById(elId || 'assign-table');
   if (!el) return;
+  if (k === undefined) k = curPeriodKey();
   const members = fp ? G.members.filter(m => m.name === fp) : G.members;
-  const cnt = (m, t) => G.items.filter(it => it.type === t && it.members.includes(m.name)).length;
+  const cnt = (m, t) => G.items.filter(it => it.type === t && it.members.includes(m.name) && itemInPeriod(it, k)).length;
   let tot = [0, 0, 0];
   const rows = members.map(m => {
     const a = cnt(m, 'temp'), b = cnt(m, 'tempq'), c = cnt(m, 'project');
