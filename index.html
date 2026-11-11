@@ -1882,7 +1882,7 @@ async function selectStatus(val) {
   const ent = getEntry(_pickerCtx.itemId, _pickerCtx.memberName);
   if (val === 'wait') { renderPickerExtra('wait'); return; }
   if (val === '0' && ent.status === 'wait') { renderPickerExtra('resume'); return; }
-  if (canFullStatus() && val === 'done') {
+  if (isAdmin() && val === 'done') {   // 只有主管能指定完成日期；同仁按下就記當下時間
     renderPickerExtra(null);
     const pk = document.getElementById('status-picker');
     document.getElementById('picker-date-row').style.display = 'block';
