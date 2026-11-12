@@ -2958,12 +2958,18 @@ function rotProfileHtml(name) {
     (rel === 'cur' ? cur : rel === 'past' ? past : none).push(it);
   });
   const period = h => h ? `${h.from || '?'}${h.status === '曾任' ? ` ～ ${h.to || '?'}` : ' 起'}` : '';
+  // 同仁：只看負責哪些業務，不顯示分數與期間（115/11/13）
   const li = (it, sub) => `<div class="rot-li" onclick="rotOpen('${it.id}')">
-      <span class="g">${it.id}</span><span class="t">${esc(it.name)}${sub ? `<br><span style="color:var(--text2);font-size:11px;">${esc(sub)}</span>` : ''}</span>${rotRel(it, name) ? rotBadge(rotScoreOf(it, name)) : ''}</div>`;
+      <span class="g">${it.id}</span><span class="t">${esc(it.name)}${isAdm && sub ? `<br><span style="color:var(--text2);font-size:11px;">${esc(sub)}</span>` : ''}</span>${isAdm && rotRel(it, name) ? rotBadge(rotScoreOf(it, name)) : ''}</div>`;
   const list = (title, html, n, empty) => `<div class="rot-list"><h5>${title}<span style="background:var(--surface2);color:var(--text2);border-radius:10px;padding:1px 8px;font-size:11px;">${n}</span></h5>${n ? html : `<div class="rot-empty">${empty}</div>`}</div>`;
   const recs = isAdm ? R.scores.filter(x => x.name === name).slice().reverse().slice(0, 12) : [];
   const recHtml = recs.map(x => { const it = R.items.find(i => i.id === x.gid); return `<tr style="cursor:pointer" onclick="rotOpen('${x.gid}')"><td>${rocDate(x.date)}</td><td style="text-align:left"><span style="color:var(--text2);font-size:11px;margin-right:4px;">${x.gid}</span>${esc(it ? it.name : x.gid)}</td><td>${rotBadge(x)}</td></tr>`; }).join('');
-  return `${rotHighBanner(name)}
+  const head = isAdm ? '' : `${rotHighBanner(name)}
+  <div class="rot-prof" style="grid-template-columns:1fr">
+    <div><h3>${esc(name)}</h3>
+      <div class="sub">到職 ${esc(p.onboard || '—')}${p.onboard ? `・年資 ${rotTenure(p.onboard)}` : ''}・目前負責 ${s.cur} 項・曾經負責 ${s.past} 項</div></div>
+  </div>`;
+  return (!isAdm ? head : `${rotHighBanner(name)}
   <div class="rot-prof">
     <div>
       <h3>${esc(name)}</h3>
@@ -2977,10 +2983,9 @@ function rotProfileHtml(name) {
       <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;">最近評分紀錄（管理員限定）</div>
       <table class="rot-hist"><thead><tr><th>日期</th><th style="text-align:left">業務</th><th>分數</th></tr></thead>
       <tbody>${recHtml || `<tr><td colspan="3" style="color:var(--text2)">尚無評分紀錄</td></tr>`}</tbody></table>
-      <div style="margin-top:10px;">${rotLegend()}</div>` : `
-      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;">評分說明</div>${rotLegend()}`}
+      <div style="margin-top:10px;">${rotLegend()}</div>` : ''}
     </div>
-  </div>
+  </div>`) + `
   <div class="rot-lists" style="grid-template-columns:repeat(3,1fr)">
     ${list('★ 目前負責', cur.map(it => li(it, period(rotCurRow(it.id, name)))).join(''), cur.length, '目前沒有負責的業務')}
     ${list('🔁 曾經負責', past.map(it => li(it, rotPastRows(it.id, name).map(period).join('；'))).join(''), past.length, '尚無')}
@@ -3241,7 +3246,7 @@ function rotMapHtml(focus) {
         let foot = '';
         const rel = focus ? rotRel(it, focus) : null;
         if (focus) {
-          foot = `<span>${rel === 'cur' ? '目前負責' : rel === 'past' ? '曾經負責' : ''}</span>${rel ? rotBadge(rotScoreOf(it, focus)) : ''}`;
+          foot = `<span>${rel === 'cur' ? '目前負責' : rel === 'past' ? '曾經負責' : ''}</span>${rel && isAdm ? rotBadge(rotScoreOf(it, focus)) : ''}`;
         } else if (isAdm) {
           const ls = R.people.map(p => ({ p, rel: rotRel(it, p.name), s: rotScoreOf(it, p.name) }));
           const can = ls.filter(x => x.s && x.s.score >= R.pass).length;
@@ -3404,6 +3409,7 @@ function rotOpen(gid) {
   // 目前負責人
   html += `<div class="rot-sec"><h4>目前負責人</h4>`;
   if (!it.owners.length) html += `<div style="font-size:12px;color:var(--text2)">未指定</div>`;
+  else if (!isAdm) html += `<div class="owners" style="display:flex;gap:6px;flex-wrap:wrap">${it.owners.map(o => rotChip(o)).join('')}</div>`;
   else html += `<table class="rot-tbl"><thead><tr><th>負責人</th><th>接手年月</th><th>目前分數</th>${isAdm ? '<th>歷次評分</th><th></th>' : ''}</tr></thead><tbody>
     ${it.owners.map(o => {
       const row = rotCurRow(gid, o);
@@ -3495,7 +3501,7 @@ function rotOpen(gid) {
   const past = rotHistOf(gid).filter(h => h.status === '曾任');
   if (isAdm || past.length) {
     html += `<div class="rot-sec"><h4>歷任負責人</h4>`;
-    if (past.length) html += `<table class="rot-tbl"><thead><tr><th>同仁</th><th>起</th><th>迄</th><th>最後評分</th>${isAdm ? '<th>歷次評分</th>' : ''}<th>備註</th>${isAdm ? '<th></th>' : ''}</tr></thead><tbody>
+    if (past.length) html += `<table class="rot-tbl"><thead><tr><th>同仁</th>${isAdm ? '<th>起</th><th>迄</th><th>最後評分</th><th>歷次評分</th><th>備註</th><th></th>' : ''}</tr></thead><tbody>
       ${past.map(h => isAdm ? `<tr><td>${rotChip(h.name)}</td>
         <td>${rotYmInput(rotDV(h, 'from'), `rotDraft('${h.id}','from',this.value)`)}</td>
         <td>${rotYmInput(rotDV(h, 'to'), `rotDraft('${h.id}','to',this.value)`)}</td>
@@ -3503,7 +3509,7 @@ function rotOpen(gid) {
         <td style="font-size:12px;white-space:nowrap">${rotIsPerson(h.name) ? rotHistText(gid, h.name) : ''}</td>
         <td><input value="${esc(rotDV(h, 'note'))}" style="width:130px" oninput="rotDraft('${h.id}','note',this.value)"></td>
         <td><button class="btn btn-sm btn-danger" title="刪除這筆" onclick="rotHistDel('${h.id}')">刪除</button></td></tr>`
-      : `<tr><td>${rotChip(h.name)}</td><td>${esc(h.from || '—')}</td><td>${esc(h.to || '—')}</td><td>${rotBadge(h.score != null ? { score:h.score, past:true } : null)}</td><td style="font-size:12px;color:var(--text2)">${esc(h.note)}</td></tr>`).join('')}
+      : `<tr><td>${rotChip(h.name)}</td></tr>`).join('')}
     </tbody></table>`;
     else html += `<div style="font-size:12px;color:var(--text2)">沒有紀錄</div>`;
     if (isAdm) {
