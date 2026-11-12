@@ -459,6 +459,7 @@ tr.rot-unhandled td:last-child{background:#fffbeb;}
   .rot-subtbl td{border:none !important;padding:3px 8px !important;}
   .rot-subtbl textarea{min-width:0;}
 }
+.rot-infoby{font-size:11px;color:var(--text2);margin-top:6px;}
 .rot-info{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .rot-info textarea{width:100%;min-height:64px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;resize:vertical;background:var(--surface);color:var(--text);}
 .rot-info ul{margin:0;padding-left:18px;font-size:12px;}
@@ -3030,6 +3031,13 @@ function rotRecheck(x) {
   if (!x.act || x.act === 'redo' || !rd.at || !x.actAt || x.actAt >= rd.at) return false;
   return x.diff != null && x.diff >= R.highDiff && (R.sublog || []).some(l => l.id === x.id && l.round === rd.name);
 }
+async function rotInfoSave(gid) {
+  try {
+    const r = await apiGet({ action:'rotInfoSave', gid, accred: document.getElementById('ri-accred').value, iso: document.getElementById('ri-iso').value });
+    if (!r.ok) throw new Error(r.error);
+    rotApply(r.data); renderRot(true); rotOpen(gid); toast('已儲存');
+  } catch (e) { toast({ forbidden:'只有這項業務的負責人可以修改', closed:'業務地圖尚未開放' }[e.message] || '儲存失敗：' + e.message, 3500); }
+}
 // ── 新增／改名／停用細項 ─────────────────────
 function rotSubMngBtns(s) {
   return `<button class="btn btn-sm btn-default" onclick="rotSubRename('${s.id}')">改名</button> <button class="btn btn-sm btn-default" style="color:var(--red)" onclick="rotSubOff('${s.id}',1)">停用</button> `;
@@ -3405,9 +3413,17 @@ function rotOpen(gid) {
       <div><div class="lbl">相關評鑑點項（一行一筆）</div><textarea placeholder="例：2.3.1" oninput="rotDraftInfo('accred',this.value)">${esc(infoV('accred'))}</textarea></div>
       <div><div class="lbl">ISO 文件（一行一筆）</div><textarea placeholder="例：文件編號、名稱" oninput="rotDraftInfo('iso',this.value)">${esc(infoV('iso'))}</textarea></div>
     </div></div>`;
+    if (it.infoBy) html = html.replace(/<\/div><\/div>$/, `</div><div class="rot-infoby">最後修改：${esc(it.infoBy)}</div></div>`);
+  } else if (R.me && it.owners.includes(R.me)) {
+    // 目前負責人：自己填，按儲存直接存
+    html += `<div class="rot-sec"><h4>相關評鑑點項・ISO 文件</h4><div class="rot-info">
+      <div><div class="lbl">相關評鑑點項（一行一筆）</div><textarea id="ri-accred" placeholder="例：2.3.1">${esc(it.accred || '')}</textarea></div>
+      <div><div class="lbl">ISO 文件（一行一筆）</div><textarea id="ri-iso" placeholder="例：文件編號、名稱">${esc(it.iso || '')}</textarea></div>
+    </div><div style="margin-top:8px;display:flex;gap:10px;align-items:center"><button class="btn btn-sm btn-primary" onclick="rotInfoSave('${it.id}')">儲存</button>
+      <span class="rot-infoby" style="margin:0">${it.infoBy ? '最後修改：' + esc(it.infoBy) : '你是這項業務的負責人，可以填寫'}</span></div></div>`;
   } else if (it.accred || it.iso) {
     html += `<div class="rot-sec"><h4>相關評鑑點項・ISO 文件</h4><div class="rot-info">
-      <div><div class="lbl">相關評鑑點項</div>${infoList(it.accred)}</div><div><div class="lbl">ISO 文件</div>${infoList(it.iso)}</div></div></div>`;
+      <div><div class="lbl">相關評鑑點項</div>${infoList(it.accred)}</div><div><div class="lbl">ISO 文件</div>${infoList(it.iso)}</div></div>${it.infoBy ? `<div class="rot-infoby">最後修改：${esc(it.infoBy)}</div>` : ''}</div>`;
   }
 
   // 儀表板清單（M03）
