@@ -1100,7 +1100,12 @@ async function doLogin() {
   else { session('wt_user', r.name); if (r.canTask) session('wt_task','1'); }
   closeLoginModal();
   toast(r.role === 'admin' ? '已以管理員身分登入' : `已登入：${r.name}`);
-  await loadAll();   // 重新載入：管理員才拿得到人員細節；業務地圖依身分回傳分數
+  // 登入一次到位：伺服器已經把這個身分的資料一起帶回來，直接顯示，不用再讀第二輪
+  if (r.boot && r.boot.read && r.boot.read.ok) {
+    bootSave('read', r.boot.read);
+    if (r.boot.rot && r.boot.rot.ok) bootSave('rot', r.boot.rot);
+    await loadAll({ fresh:true });
+  } else await loadAll();   // 舊版後端：照舊重新載入
 }
 
 function clearSession() {
@@ -1168,7 +1173,7 @@ function bootClear() { try { localStorage.removeItem(BOOT_KEY); } catch (e) {} }
 function setSyncing(v) { const el = document.getElementById('sync-badge'); if (el) el.style.display = v ? '' : 'none'; }
 let _loadSeq = 0, _dirtyKeys = null;   // 背景更新期間同仁自己改過的狀態，不被較舊的伺服器資料蓋掉
 
-async function loadAll() {
+async function loadAll(opts) {
   // 舊版登入（沒有 token）的同仁／管理員 session 一律清掉，請重新登入
   if (currentUser() && !session('wt_token')) clearSession();
   const seq = ++_loadSeq;
@@ -1185,6 +1190,7 @@ async function loadAll() {
     applyRead(cache.read);
     if (cache.rot) { try { rotApply(cache.rot); } catch (e) {} }
     show();
+    if (opts && opts.fresh) { setSyncing(false); _dirtyKeys = null; return; }   // 剛登入帶回來的就是最新的
     setSyncing(true);
   } else showLoading(true);
 
