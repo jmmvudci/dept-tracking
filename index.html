@@ -579,6 +579,7 @@ table.delay-table.plan-qtbl th.cur{background:#dbeafe;color:#1d4ed8;}
   <h1>📋 教學研究部工作進度追蹤</h1>
   <span class="year-badge" id="year-badge">2026</span>
   <div id="login-area">
+    <span id="sync-badge" style="display:none;font-size:11px;color:var(--text2);margin-right:6px;">⟳ 更新中…</span>
     <span id="user-label"></span>
     <button id="login-btn" onclick="showLoginModal()">登入</button>
     <button id="logout-btn" style="display:none" onclick="doLogout()">登出</button>
@@ -1103,6 +1104,7 @@ async function doLogin() {
 }
 
 function clearSession() {
+  bootClear();
   ['wt_admin','wt_taskonly','wt_task','wt_subadmin','wt_user','wt_token'].forEach(k => session(k, null));
 }
 
@@ -1149,13 +1151,71 @@ async function apiGet(params) {
 // ══════════════════════════════════════════════
 //  LOAD & SAVE
 // ══════════════════════════════════════════════
+// ── 開啟加速：先用這台電腦上次的資料畫面，同時在背景向伺服器拿最新的（兩份資料一起拿）──
+const BOOT_KEY = 'wt_boot';
+function bootWho() { return ['wt_admin','wt_taskonly','wt_task','wt_user'].map(k => session(k) || '').join('|'); }
+function bootLoad() {
+  try { const c = JSON.parse(localStorage.getItem(BOOT_KEY) || 'null'); return c && c.who === bootWho() ? c : null; } catch (e) { return null; }
+}
+function bootSave(part, d) {
+  try {
+    const c = bootLoad() || { who: bootWho() };
+    c[part] = d; c.t = Date.now();
+    localStorage.setItem(BOOT_KEY, JSON.stringify(c));
+  } catch (e) { /* 存不下就算了，下次照常載入 */ }
+}
+function bootClear() { try { localStorage.removeItem(BOOT_KEY); } catch (e) {} }
+function setSyncing(v) { const el = document.getElementById('sync-badge'); if (el) el.style.display = v ? '' : 'none'; }
+let _loadSeq = 0, _dirtyKeys = null;   // 背景更新期間同仁自己改過的狀態，不被較舊的伺服器資料蓋掉
+
 async function loadAll() {
-  showLoading(true);
   // 舊版登入（沒有 token）的同仁／管理員 session 一律清掉，請重新登入
   if (currentUser() && !session('wt_token')) clearSession();
-  try {
-    const d = await apiGet({ action:'read', year: G.year });
-    if (d.authOk === false) { clearSession(); toast('登入已逾時，請重新登入', 3500); }
+  const seq = ++_loadSeq;
+  _dirtyKeys = new Set();
+  const cache = bootLoad();
+  let shown = false;
+  const show = () => {
+    if (shown) return; shown = true;
+    P.loaded = false; P.person = ''; P.form = null;
+    showLoading(false);
+    applyAuth(); populateFilters(); refreshAll();
+  };
+  if (cache && cache.read) {
+    applyRead(cache.read);
+    if (cache.rot) { try { rotApply(cache.rot); } catch (e) {} }
+    show();
+    setSyncing(true);
+  } else showLoading(true);
+
+  const pRead = apiGet({ action:'read', year: G.year }).then(d => {
+    if (seq !== _loadSeq) return;
+    if (d.authOk === false) { clearSession(); bootClear(); toast('登入已逾時，請重新登入', 3500); }
+    applyRead(d, _dirtyKeys);
+    bootSave('read', d);
+    if (shown) { applyAuth(); populateFilters(); refreshAll(); } else show();
+  }).catch(() => {
+    if (seq !== _loadSeq || shown) return;
+    loadLocal(); normalizeData(); mergeBuiltinHolidays(); show();
+  });
+  const pRot = rotLoad().then(d => {
+    if (seq !== _loadSeq) return;
+    if (d) bootSave('rot', d);
+    if (shown) {
+      applyAuth();
+      if (document.getElementById('panel-rot').classList.contains('active')) renderRot(true);
+    }
+  });
+  await Promise.all([pRead, pRot]);
+  if (seq !== _loadSeq) return;
+  if (!shown) show();
+  setSyncing(false);
+  _dirtyKeys = null;
+}
+
+function applyRead(d, keep) {
+  {
+    const local = keep && keep.size ? Object.fromEntries([...keep].map(k => [k, G.statusMap[k]])) : null;
     G.members   = d.members   || [];
     G.items     = d.items     || [];
     G.holidays  = d.holidays  || [];
@@ -1163,20 +1223,13 @@ async function loadAll() {
     G.year      = d.year || G.year;
     G.statusMap = {};
     (d.statuses||[]).forEach(r => { G.statusMap[r.key] = safeParseEntry(r.value); });
+    if (local) Object.entries(local).forEach(([k, v]) => { if (v) G.statusMap[k] = v; });
     normalizeData();
     mergeBuiltinHolidays();
     document.getElementById('year-badge').textContent = G.year;
     document.getElementById('cfg-year').value = G.year;
     document.getElementById('admin-user').value = G.cfg.adminUser || '';
-  } catch(e) {
-    loadLocal();
-    normalizeData();
-    mergeBuiltinHolidays();
   }
-  await rotLoad();
-  P.loaded = false; P.person = ''; P.form = null;
-  showLoading(false);
-  applyAuth(); populateFilters(); refreshAll();
 }
 
 function safeParseEntry(raw) {
@@ -1213,6 +1266,7 @@ async function pushStatus(itemId, memberName, val, extra) {
     const r = await apiGet(params);
     if (!r || !r.ok) throw new Error(r ? r.error : '連線失敗');
     G.statusMap[key] = r.entry;
+    if (_dirtyKeys) _dirtyKeys.add(key);
     saveLocal();
     return true;
   } catch (e) {
@@ -2633,8 +2687,10 @@ async function rotLoad() {
     const d = await apiGet({ action:'rotRead' });
     if (!d.ok) throw new Error(d.error || 'load failed');
     rotApply(d);
+    return d;
   } catch (e) {
-    R.loaded = false; R.open = isAdmin(); R.err = e.message;
+    if (!R.loaded) { R.open = isAdmin(); R.err = e.message; }   // 已經用上次的資料顯示時，不要清掉
+    return null;
   }
 }
 function rotApply(d) {
@@ -2779,7 +2835,7 @@ function renderRot(keepFilters) {
   if (!R.loaded) {
     body.innerHTML = R.err
       ? `<div class="rot-note" style="background:var(--red-light);color:var(--red)">業務地圖資料載入失敗：${esc(R.err)}。請確認 Apps Script 已更新並執行過初始化函式。</div>`
-      : '';
+      : '<div class="rot-note">業務地圖載入中…</div>';
     return;
   }
   if (!keepFilters) rotFillFilters();
