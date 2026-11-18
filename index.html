@@ -2713,7 +2713,10 @@ function rotApply(d) {
       subsAll:d.subs, 
       common:d.common || [], dash:d.dash || []
     });
-    R.subs = R.subsAll.filter(x => !x.off);   // 停用的細項不顯示、不列入統計（管理員在「新增／停用的細項」看得到）
+    // 停辦的大項、停用的細項：不顯示在地圖、不列入統計（另有「已停辦業務」區與「新增／停用的細項」可查）
+    R.itemsAll = R.items;
+    R.items = R.itemsAll.filter(it => !it.stopped);
+    R.subs = R.subsAll.filter(x => !x.off && R.items.some(i => i.id === x.gid));
     if (R.role !== 'admin') { R.person = R.role === 'member' ? R.me : ''; if (R.view !== 'map') R.view = 'map'; }
     else if (R.person && !R.people.some(p => p.name === R.person)) R.person = '';
     _rotBy = {};
@@ -3157,8 +3160,54 @@ async function rotSubRename(id) {
 }
 async function rotSubOff(id, off) {
   const x = R.subsAll.find(s => s.id === id);
-  if (off && !confirm(`停用「${x.name}」？停用後不再顯示、不列入統計，紀錄會保留，主管可以恢復。`)) return;
-  await rotSubCall({ action:'rotSubSave', id, off: off ? '1' : '0' }, off ? '已停用' : '已恢復');
+  if (!off) return rotSubCall({ action:'rotSubSave', id, off:'0' }, '已恢復');
+  const why = (prompt(`停用「${x.name}」\n停用原因（必填）：`) || '').trim();
+  if (!why) { toast('停用要填原因'); return; }
+  const t = new Date();
+  const def = `${t.getFullYear() - 1911}/${String(t.getMonth() + 1).padStart(2, '0')}/${String(t.getDate()).padStart(2, '0')}`;
+  const d = (prompt('從哪一天開始不做？（民國年/月/日，例：115/11/01）', def) || '').trim();
+  if (!d) return;
+  await rotSubCall({ action:'rotSubSave', id, off:'1', reason:why, date:d }, '已停用');
+}
+// ── 大項停辦／恢復 ───────────────────────────
+async function rotItemStop(gid, op) {
+  const d = (document.getElementById(op === 'stop' ? 'rs-stop-date' : 'rs-res-date') || {}).value || '';
+  const why = ((document.getElementById(op === 'stop' ? 'rs-stop-why' : 'rs-res-why') || {}).value || '').trim();
+  if (op === 'stop' && !why) { toast('停辦要填原因'); return; }
+  const it = R.itemsAll.find(i => i.id === gid);
+  if (op === 'stop' && !confirm(`確定停辦「${gid} ${it.name}」？`)) return;
+  try {
+    const r = await apiGet({ action:'rotItemStop', gid, op, date:d, reason:why });
+    if (!r.ok) throw new Error(r.error);
+    R.stopForm = '';
+    rotApply(r.data); renderRot(true); rotOpen(gid);
+    toast(op === 'stop' ? '已停辦，移到「已停辦業務」' : '已恢復，請記得指定負責人');
+  } catch (e) { toast({ 'reason required':'請填原因', 'future date':'日期不能晚於今天', forbidden:'只有主管可以停辦／恢復' }[e.message] || '失敗：' + e.message, 3500); }
+}
+function rotStoppedHtml() {
+  const list = (R.itemsAll || []).filter(it => it.stopped).sort((a, b) => a.stopDate < b.stopDate ? 1 : -1);
+  if (!list.length) return '';
+  const last = it => { const l = (it.stopLog || []).filter(x => x.act === '停辦').pop(); return l && l.owners ? l.owners.join('、') : ''; };
+  return `<details class="rot-common" ${R.showStopped ? 'open' : ''} ontoggle="R.showStopped=this.open"><summary style="cursor:pointer;font-weight:700;color:var(--text2)">🗄 已停辦業務（${list.length}）</summary>
+    <div style="overflow-x:auto;margin-top:8px"><table class="rot-tbl"><thead><tr><th>編號</th><th>業務</th><th>停辦日期</th><th>原因</th>${R.role === 'admin' ? '<th>停辦時的負責人</th>' : ''}</tr></thead><tbody>
+    ${list.map(it => `<tr style="cursor:pointer" onclick="rotOpen('${it.id}')"><td>${esc(it.id)}</td><td>${esc(it.name)}</td><td style="white-space:nowrap">${esc(rocDate(it.stopDate))}</td><td>${esc(it.stopReason)}</td>${R.role === 'admin' ? `<td>${esc(last(it)) || '—'}</td>` : ''}</tr>`).join('')}
+    </tbody></table></div></details>`;
+}
+function rotOpenStopped(it) {
+  const isAdm = R.role === 'admin';
+  const subs = R.subsAll.filter(s => s.gid === it.id && !s.off);
+  const past = rotHistOf(it.id).filter(h => h.status === '曾任');
+  let html = `<h2><span style="color:var(--text2);font-size:13px;margin-right:6px;">${it.id}</span>${esc(it.name)} <span class="plan-st overdue" style="vertical-align:middle">已停辦</span></h2>
+    <div class="rot-note" style="background:var(--red-light);color:var(--red);margin-top:8px">${esc(rocDate(it.stopDate))} 起停辦：${esc(it.stopReason)}</div>`;
+  html += `<div class="rot-sec"><h4>歷任負責人</h4>${past.length ? past.map(h => `${rotChip(h.name)}${isAdm && (h.from || h.to) ? `<span style="font-size:11px;color:var(--text2);margin:0 10px 0 4px">${esc(h.from || '?')}～${esc(h.to || '?')}</span>` : ' '}`).join('') : '<span style="font-size:12px;color:var(--text2)">沒有紀錄</span>'}</div>`;
+  if (subs.length) html += `<div class="rot-sec"><h4>停辦時的細項（${subs.length}）</h4><table class="rot-tbl"><tbody>${subs.map(s => `<tr><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${esc(s.owner)}</td></tr>`).join('')}</tbody></table></div>`;
+  if (isAdm) {
+    html += `<div class="rot-sec"><h4>停辦／恢復紀錄</h4><div class="plan-log">${(it.stopLog || []).slice().reverse().map(l => `<div><span>${esc(String(l.t).replace('T', ' '))}</span>　${esc(l.by)}　<b>${esc(l.act)}</b>（${esc(rocDate(l.date))}）${l.reason ? '：' + esc(l.reason) : ''}${l.owners && l.owners.length ? `　當時負責人 ${esc(l.owners.join('、'))}` : ''}</div>`).join('') || '沒有紀錄'}</div></div>`;
+    html += `<div class="rot-sec"><h4>恢復這項業務</h4><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">恢復日期 <input type="date" id="rs-res-date" value="${todayStr()}" max="${todayStr()}">
+      原因 <input id="rs-res-why" placeholder="選填" style="flex:1;min-width:200px"><button class="btn btn-sm btn-primary" onclick="rotItemStop('${it.id}','resume')">恢復</button></div>
+      <div style="margin-top:6px;font-size:12px;color:var(--text2)">恢復後回到業務地圖；負責人要再另外指定</div></div>`;
+  }
+  rotShowModal(html, false);
 }
 // 管理員：新增／停用的細項
 function rotChangesRows() {
@@ -3173,12 +3222,12 @@ function rotChangesHtml() {
   const rows = rotChangesRows();
   const it = gid => R.items.find(i => i.id === gid) || { name:'' };
   return `<div style="font-size:12px;color:var(--text2);margin-bottom:8px">同仁自己新增或停用的細項（不用核准）。拆得太細的可以停用；停用的可以恢復</div>
-    <div style="overflow-x:auto"><table class="rot-tbl"><thead><tr><th>時間</th><th>動作</th><th>誰</th><th>業務</th><th>細項</th><th>負責人</th><th>自評難度</th><th></th></tr></thead><tbody>
+    <div style="overflow-x:auto"><table class="rot-tbl"><thead><tr><th>日期</th><th>動作</th><th>誰</th><th>業務</th><th>細項</th><th>負責人</th><th>自評難度</th><th>停用原因</th><th></th></tr></thead><tbody>
     ${rows.map(r => `<tr${r.x.off && r.kind === 'add' ? ' style="opacity:.55"' : ''}><td style="white-space:nowrap">${esc(String(r.t).replace('T', ' '))}</td>
       <td>${r.kind === 'add' ? '<span class="plan-st approved">新增</span>' : '<span class="plan-st overdue">停用</span>'}</td><td>${esc(r.by)}</td>
       <td><a href="javascript:void 0" onclick="rotOpen('${r.x.gid}')" style="color:inherit"><span style="color:var(--text2);font-size:11px">${esc(r.x.gid)}</span> ${esc(it(r.x.gid).name)}</a></td>
-      <td>${esc(r.x.name)}</td><td>${esc(r.x.owner)}</td><td>${r.x.diff != null ? r.x.diff : '—'}</td>
-      <td style="white-space:nowrap">${r.x.off ? (r.kind === 'off' ? `<button class="btn btn-sm btn-primary" onclick="rotSubOff('${r.x.id}',0)">恢復</button>` : '<span style="font-size:11px;color:var(--text2)">已停用</span>') : `<button class="btn btn-sm btn-default" onclick="rotSubRename('${r.x.id}')">改名</button> <button class="btn btn-sm btn-default" style="color:var(--red)" onclick="rotSubOff('${r.x.id}',1)">停用</button>`}</td></tr>`).join('') || '<tr><td colspan="8" style="color:var(--text2)">目前沒有同仁新增或停用細項</td></tr>'}
+      <td>${esc(r.x.name)}</td><td>${esc(r.x.owner)}</td><td>${r.x.diff != null ? r.x.diff : '—'}</td><td>${r.kind === 'off' ? esc(r.x.offReason || '—') : ''}</td>
+      <td style="white-space:nowrap">${r.x.off ? (r.kind === 'off' ? `<button class="btn btn-sm btn-primary" onclick="rotSubOff('${r.x.id}',0)">恢復</button>` : '<span style="font-size:11px;color:var(--text2)">已停用</span>') : `<button class="btn btn-sm btn-default" onclick="rotSubRename('${r.x.id}')">改名</button> <button class="btn btn-sm btn-default" style="color:var(--red)" onclick="rotSubOff('${r.x.id}',1)">停用</button>`}</td></tr>`).join('') || '<tr><td colspan="9" style="color:var(--text2)">目前沒有同仁新增或停用細項</td></tr>'}
     </tbody></table></div>`;
 }
 function rotActTag(x) {
@@ -3260,7 +3309,7 @@ function rotMapHtml(focus) {
         </div>`;
       }).join('')}</div></div>`;
   }).join('');
-  return (html || `<div class="ov-empty">沒有符合條件的業務</div>`) + (R.group ? '' : rotCommonHtml(focus));
+  return (html || `<div class="ov-empty">沒有符合條件的業務</div>`) + (R.group ? '' : rotCommonHtml(focus) + rotStoppedHtml());
 }
 
 // 部門共同事務：大家輪流或一起做的事，不評分、不換人
@@ -3391,8 +3440,9 @@ function rotUpdateBar() {
 }
 
 function rotOpen(gid) {
-  const it = gid === '__common' ? { id:'__common' } : R.items.find(x => x.id === gid);
+  const it = gid === '__common' ? { id:'__common' } : (R.itemsAll || R.items).find(x => x.id === gid);
   if (!it) return;
+  if (it.stopped) { R.openGid = gid; R.form = null; rotDraftReset(); return rotOpenStopped(it); }
   if (R.openGid !== gid) { R.form = null; rotDraftReset(); }
   if (!R.draft) rotDraftReset();
   R.openGid = gid;
@@ -3536,6 +3586,14 @@ function rotOpen(gid) {
     </tbody></table>` : '<div style="font-size:12px;color:var(--text2)">沒有細項</div>'}
     ${canAddSub ? (R.subForm === gid ? rotSubAddForm(it) : `<div style="margin-top:8px"><button class="btn btn-sm btn-default" onclick="R.subForm='${gid}';rotOpen('${gid}')">＋ 新增細項</button></div>`) : ''}</div>`;
 
+  // 停辦（限管理員）
+  if (isAdm) html += R.stopForm === gid ? `<div class="rot-sec"><h4 style="color:var(--red)">停辦這項業務</h4><div class="rot-form" style="display:block">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">停辦日期 <input type="date" id="rs-stop-date" value="${todayStr()}" max="${todayStr()}">
+        原因 <input id="rs-stop-why" placeholder="必填，例：116/01 起改由企劃部辦理" style="flex:1;min-width:240px"></div>
+      <div style="margin-top:6px;font-size:12px;color:var(--text2)">停辦後：目前負責人轉為「曾任」（卸任年月＝停辦年月）、代理人清空；評分與歷程都保留；這一項不再出現在地圖與統計，移到最下方「已停辦業務」，可以恢復</div>
+      <div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-sm btn-danger" onclick="rotItemStop('${gid}','stop')">確定停辦</button><button class="btn btn-sm btn-default" onclick="R.stopForm='';rotOpen('${gid}')">取消</button></div></div></div>`
+    : `<div class="rot-sec" style="text-align:right"><button class="btn btn-sm btn-default" style="color:var(--red)" onclick="R.stopForm='${gid}';rotOpen('${gid}')">停辦這項業務…</button></div>`;
+
   rotShowModal(html, isAdm);
   const sel = document.getElementById('rot-f-to');
   if (sel) sel.addEventListener('change', () => { document.getElementById('rot-f-other').style.display = sel.value === '__other' ? '' : 'none'; });
@@ -3596,7 +3654,7 @@ function rotCloseModal() {
   const n = rotDirtyCount();
   if (n && !confirm(`還有 ${n} 項修改沒有儲存，確定要關閉並放棄嗎？`)) return;
   document.getElementById('rot-modal').classList.remove('active');
-  R.openGid = null; R.form = null; R.subForm = ''; rotDraftReset();
+  R.openGid = null; R.form = null; R.subForm = ''; R.stopForm = ''; rotDraftReset();
 }
 function rotDiscard() {
   if (!confirm('放棄所有尚未儲存的修改？')) return;
