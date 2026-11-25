@@ -556,11 +556,27 @@ table.delay-table.plan-qtbl th.cur{background:#dbeafe;color:#1d4ed8;}
 .plan-cats label{display:flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:8px;padding:7px 12px;cursor:pointer;font-size:13px;}
 .plan-cats label.on{border-color:var(--accent);background:var(--accent-light,#eff6ff);font-weight:600;}
 .plan-cats input{width:auto;margin:0;}
+.pf-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;display:none;align-items:flex-start;justify-content:center;overflow-y:auto;padding:30px 0;}
+.pf-overlay.active{display:flex;}
+.pf-box{background:var(--surface);border-radius:var(--radius);padding:22px;width:94vw;max-width:640px;box-shadow:var(--shadow-md);}
+.iv-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;font-size:13px;}
+.iv-sec{margin-top:16px;}
+.iv-sec h4{font-size:14px;margin:0 0 6px;border-bottom:1px solid var(--border);padding-bottom:4px;}
+.iv-sec ul{margin:4px 0;padding-left:20px;font-size:13px;line-height:1.7;}
+.iv-h{font-weight:600;font-size:13px;margin-top:6px;}
+.iv-mute{font-size:12px;color:var(--text2);}
+.iv-tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.iv-tbl th,.iv-tbl td{border:1px solid var(--border);padding:4px 6px;text-align:left;vertical-align:top;}
 #plan-modal{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;display:none;align-items:center;justify-content:center;}
 #plan-modal.active{display:flex;}
 #plan-modal-box{background:var(--surface);border-radius:var(--radius);padding:22px;width:94vw;max-width:620px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-md);}
 @media (max-width:640px){.plan-sum{gap:12px;}.plan-sum b{font-size:18px;}.plan-item .top{flex-direction:column;}}
 @media print{
+  body.print-perf *{visibility:hidden !important;}
+  body.print-perf #perf-print,body.print-perf #perf-print *{visibility:visible !important;}
+  body.print-perf #perf-print{position:absolute;left:0;top:0;width:100%;}
+  body.print-perf .pf-overlay{position:static !important;background:none !important;}
+  body.print-perf .iv-sec{break-inside:avoid;}
   body.print-plan *{visibility:hidden !important;}
   body.print-plan #plan-print,body.print-plan #plan-print *{visibility:visible !important;}
   body.print-plan #plan-print{position:absolute;left:0;top:0;width:100%;}
@@ -591,6 +607,7 @@ table.delay-table.plan-qtbl th.cur{background:#dbeafe;color:#1d4ed8;}
   <button class="tab-btn" data-panel="panel-matrix" onclick="switchTab(this)">🗂 追蹤矩陣</button>
   <button class="tab-btn hidden" id="tab-rot" data-panel="panel-rot" onclick="switchTab(this)">🗺 業務地圖</button>
   <button class="tab-btn hidden" id="tab-plan" data-panel="panel-plan" onclick="switchTab(this)">🎯 年度計畫</button>
+  <button class="tab-btn hidden" id="tab-perf" data-panel="panel-perf" onclick="switchTab(this)">📝 表現紀錄</button>
   <button class="tab-btn hidden" id="tab-items" data-panel="panel-items" onclick="switchTab(this)">📝 任務管理</button>
   <button class="tab-btn hidden" id="tab-settings" data-panel="panel-settings" onclick="switchTab(this)">⚙️ 設定</button>
 </div>
@@ -748,6 +765,7 @@ table.delay-table.plan-qtbl th.cur{background:#dbeafe;color:#1d4ed8;}
         <tbody id="items-tbody"></tbody>
       </table>
     </div>
+    <div id="items-deleted"></div>
   </div>
 
   <!-- 業務地圖／輪訓 -->
@@ -763,6 +781,8 @@ table.delay-table.plan-qtbl th.cur{background:#dbeafe;color:#1d4ed8;}
   </div>
   <!-- 年度工作計畫 -->
   <div class="panel" id="panel-plan"><div id="plan-body"></div></div>
+  <!-- 同仁表現紀錄（只有管理員） -->
+  <div class="panel" id="panel-perf"><div id="perf-body"></div></div>
   <!-- Settings -->
   <div class="panel" id="panel-settings">
     <div class="settings-section">
@@ -816,6 +836,8 @@ table.delay-table.plan-qtbl th.cur{background:#dbeafe;color:#1d4ed8;}
 
 <!-- 業務地圖：明細 -->
 <div id="plan-modal"><div id="plan-modal-box"></div></div>
+<div id="perf-modal" class="pf-overlay"><div id="perf-modal-box" class="pf-box"></div></div>
+<div id="perf-iv" class="pf-overlay"><div id="perf-iv-box" class="pf-box" style="max-width:900px"></div></div>
 <div id="rot-modal" onclick="if(event.target===this)rotCloseModal()">
   <div id="rot-modal-box"></div>
 </div>
@@ -886,6 +908,7 @@ table.delay-table.plan-qtbl th.cur{background:#dbeafe;color:#1d4ed8;}
       <label>備註</label>
       <textarea id="f-note" placeholder="選填"></textarea>
     </div>
+    <div id="f-editlog"></div>
     <div class="modal-actions">
       <button class="btn btn-default" onclick="closeModal()">取消</button>
       <button class="btn btn-primary" onclick="saveItem()">儲存</button>
@@ -1132,6 +1155,7 @@ function applyAuth() {
   document.getElementById('tab-rot').classList.toggle('hidden', !(isAdmin() || R.open));
   // 年度計畫：管理員＋同仁（專用帳號、未登入看不到）
   document.getElementById('tab-plan').classList.toggle('hidden', !planCanSee());
+  document.getElementById('tab-perf').classList.toggle('hidden', !isAdmin());   // 表現紀錄：只有管理員
   const act = document.querySelector('.tab-btn.active');
   if (act && act.classList.contains('hidden')) switchTab(document.querySelector('.tab-btn[data-panel="panel-overview"]'));
   // 停班停課順延：僅管理員
@@ -1182,7 +1206,7 @@ async function loadAll(opts) {
   let shown = false;
   const show = () => {
     if (shown) return; shown = true;
-    P.loaded = false; P.person = ''; P.form = null;
+    P.loaded = false; P.person = ''; P.form = null; PF.loaded = false; PF.records = []; PF.form = null;
     showLoading(false);
     applyAuth(); populateFilters(); refreshAll();
   };
@@ -1225,6 +1249,7 @@ function applyRead(d, keep) {
     G.members   = d.members   || [];
     G.items     = d.items     || [];
     G.holidays  = d.holidays  || [];
+    G.deleted   = d.deleted   || [];
     G.cfg       = Object.assign(G.cfg, d.cfg || {});
     G.year      = d.year || G.year;
     G.statusMap = {};
@@ -2112,6 +2137,7 @@ function applyHideDone(pid, items, fp) {
   return keep;
 }
 function renderItems() {
+  setTimeout(renderDeletedLog, 0);
   const fp = document.getElementById('it-person-filter').value;
   const ft = document.getElementById('it-type-filter').value;
   let items = visibleItems();
@@ -2129,17 +2155,42 @@ function renderItems() {
       <td data-label="截止時間">${it.deadtime||'—'}</td>
       <td data-label="備註" style="max-width:180px;white-space:normal;color:var(--text2)">${it.note||'—'}</td>
       <td data-label="操作">
-        ${isAdmin() ? `<button class="btn btn-sm btn-default" onclick="openItemModal('${it.id}')">編輯</button>
+        ${canEditItem(it) ? `<button class="btn btn-sm btn-default" onclick="openItemModal('${it.id}')">編輯</button>
         <button class="btn btn-sm btn-danger" onclick="deleteItem('${it.id}')">刪除</button>` : ''}
+        ${!isAdmin() && it.createdBy ? `<div style="font-size:11px;color:var(--text2);margin-top:2px">建立：${esc(it.createdBy)}</div>` : ''}
       </td>
     </tr>`;
   }).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:30px">${document.getElementById('it-hide-done').checked && visibleItems().length ? '沒有未完成的任務（取消勾選「隱藏已完成」可看全部）' : '尚無任務'}</td></tr>`;
 }
 
+// 115/11/25：管理員可編輯全部；有新增任務權限的同仁只能編輯／刪除自己建立的
+function canEditItem(it) { return isAdmin() || (canTask() && !!it.createdBy && it.createdBy === currentUser()); }
+function itemDeadlinePassed(it) {
+  if (!it || !it.deadline) return false;
+  return Date.now() > new Date(it.deadline + 'T' + (it.deadtime || '17:00') + ':00+08:00').getTime();
+}
+function renderDeletedLog() {
+  const el = document.getElementById('items-deleted');
+  if (!el) return;
+  if (!isAdmin() || !(G.deleted || []).length) { el.innerHTML = ''; return; }
+  const ST = { '0':'待辦', done:'已完成', wait:'等待資料', '3':'待確認', na:'N/A' };
+  el.innerHTML = `<details style="margin-top:18px"><summary style="cursor:pointer;font-weight:700;color:var(--text2)">🗑 刪除紀錄（${G.deleted.length}，管理員限定）</summary>
+    <div class="items-table-wrap" style="margin-top:8px"><table class="items-table"><thead><tr><th>刪除時間</th><th>刪除者</th><th>任務名稱</th><th>建立者</th><th>截止日期</th><th>當時狀態</th></tr></thead><tbody>
+    ${G.deleted.map(d => `<tr><td style="white-space:nowrap">${esc(String(d.t).replace('T', ' '))}</td><td>${esc(d.by)}</td><td>${esc(d.name)}</td><td>${esc(d.createdBy || '—')}</td><td>${esc(d.deadline || '—')}</td>
+      <td style="font-size:12px">${(d.members || '').split(',').filter(Boolean).map(m => `${esc(m)}：${esc(ST[(d.st || {})[m]] || (d.st || {})[m] || '未更新')}`).join('、')}</td></tr>`).join('')}
+    </tbody></table></div></details>`;
+}
 function openItemModal(id) {
   _editingItemId = id || null;
   document.getElementById('modal-title').textContent = id ? '編輯任務' : '新增任務';
-  if (id && !isAdmin()) { toast('僅管理員可編輯任務'); return; }
+  const cur = id ? G.items.find(x => x.id === id) : null;
+  if (id && !canEditItem(cur || {})) { toast('只能編輯自己建立的任務'); return; }
+  const lockDl = !!cur && !isAdmin() && itemDeadlinePassed(cur);
+  ['f-deadline', 'f-deadtime'].forEach(k => { document.getElementById(k).disabled = lockDl; });
+  const logEl = document.getElementById('f-editlog');
+  logEl.innerHTML = (lockDl ? '<div style="font-size:12px;color:var(--orange);margin-bottom:8px">截止日已過，不能再改截止日／截止時間；需要改請找主管</div>' : '')
+    + (isAdmin() && cur && (cur.editLog || []).length ? `<details style="margin-bottom:10px"><summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--text2)">📜 異動紀錄（${cur.editLog.length}）</summary><div class="plan-log">${cur.editLog.slice().reverse().map(l => `<div><span>${esc(String(l.t).replace('T', ' '))}</span> ${esc(l.by)}：${(l.ch || []).map(esc).join('；')}</div>`).join('')}</div></details>` : '')
+    + (isAdmin() && cur && cur.createdBy ? `<div style="font-size:11px;color:var(--text2);margin-bottom:8px">建立者：${esc(cur.createdBy)}</div>` : '');
   document.getElementById('f-members').innerHTML = visibleMembers().map(m =>
     `<label><input type="checkbox" value="${m.name}"> ${m.name}</label>`).join('');
   document.getElementById('deadline-hint').textContent = '';
@@ -2192,8 +2243,9 @@ async function saveItem() {
 
   if (_editingItemId) {
     const idx = G.items.findIndex(x=>x.id===_editingItemId);
-    if (idx>=0) G.items[idx] = item;
+    if (idx>=0) G.items[idx] = Object.assign({}, G.items[idx], item);
   } else {
+    item.createdBy = isAdmin() ? '管理員' : currentUser();
     G.items.push(item);
   }
 
@@ -2204,18 +2256,21 @@ async function saveItem() {
     if (r && r.entries) { Object.assign(G.statusMap, r.entries); saveLocal(); }
     toast(quick ? '交辦已登記（已記為完成）' : '任務已儲存');
   }
-  catch(e) { toast(e.message === 'forbidden' ? '沒有權限或登入逾時，請重新登入' : '儲存失敗：' + e.message, 4000); }
+  catch(e) { toast(e.message === 'forbidden' ? '沒有權限或登入逾時，請重新登入' : e.message === 'not creator' ? '只能編輯自己建立的任務' : e.message === 'deadline passed' ? '截止日已過，不能再改截止日，請找主管' : '儲存失敗：' + e.message, 4000); loadAll(); }
   renderItems(); renderMatrix(); renderOverview();
 }
 
 async function deleteItem(id) {
-  if (!isAdmin()) return;
-  if (!confirm('確定要刪除這項任務？')) return;
+  const it = G.items.find(x => x.id === id);
+  if (!it || !canEditItem(it)) return;
+  const started = it.members.some(m => getEntry(id, m));
+  if (!confirm(`確定要刪除「${it.name}」？${started ? '\n已經有人更新過狀態，刪除後這些狀態也會一起消失（主管看得到刪除紀錄）。' : ''}`)) return;
   G.items = G.items.filter(x=>x.id!==id);
   saveLocal();
   try { const r = await apiGet({ action:'deleteItem', id }); if (r && r.ok === false) throw new Error(r.error); toast('任務已刪除'); }
-  catch(e) { toast(e.message === 'forbidden' ? '沒有權限或登入逾時，請重新登入' : '刪除失敗：' + e.message, 4000); }
+  catch(e) { toast(e.message === 'forbidden' ? '沒有權限或登入逾時，請重新登入' : e.message === 'not creator' ? '只能刪除自己建立的任務' : '刪除失敗：' + e.message, 4000); }
   renderItems(); renderMatrix(); renderOverview();
+  if (isAdmin()) loadAll();   // 更新刪除紀錄
 }
 
 function closeModal() { document.getElementById('modal-overlay').classList.remove('active'); }
@@ -2622,6 +2677,7 @@ function switchTab(btn) {
   if (pid==='panel-settings')  renderSettings();
   if (pid==='panel-rot')       { renderRot(); if (planCanSee() && !P.loaded) planLoad().then(() => renderRot(true)); }
   if (pid==='panel-plan')      { renderPlan(); planLoad().then(renderPlan); }
+  if (pid==='panel-perf')      { renderPerf(); perfLoad().then(renderPerf); }
 }
 
 // ══════════════════════════════════════════════
@@ -4129,6 +4185,198 @@ function planPrint() {
   document.body.classList.add('print-plan');
   window.print();
   setTimeout(() => document.body.classList.remove('print-plan'), 500);
+}
+
+
+// ══════════════════════════════════════════════
+//  📝 同仁表現紀錄（Perf.gs，只有管理員看得到）
+//  平時記錄 → 待改進追蹤到結案 → 年度面談列印頁（整合延遲率、交辦、年度計畫、業務與熟悉度、細項自評）
+// ══════════════════════════════════════════════
+const PF = { loaded:false, err:'', records:[], person:'', type:'', period:'cur', onlyTrack:false, due:false, form:null, edit:null };
+const PF_TYPE = { good:'👍 優良表現', improve:'⚠️ 待改進', note:'📌 一般紀錄' };
+const PF_WAYS = ['口頭提醒', '面談溝通', '安排訓練或資深同仁帶著做', '調整業務分工', '列入考核', '其他'];
+const PF_ST = { pending:'待處理', tracking:'追蹤中', improved:'已改善', notimproved:'未改善', closed:'結案' };
+const PF_FB = ['口頭肯定', '公開表揚', '列入考核加分'];
+const PF_ERR = { forbidden:'只有主管可以使用', 'missing text':'請寫內容', 'missing type':'請選類型', 'missing name':'請選同仁', 'future date':'日期不能晚於今天', 'bad date':'日期格式錯誤' };
+function pfToday() { return PF.today || todayStr(); }
+function pfOpenTrack(x) { return x.track && ['pending', 'tracking', 'notimproved'].includes(x.status); }
+function pfDue(x) { return pfOpenTrack(x) && x.next && x.next <= pfToday(); }
+function pfInPeriod(x, k) { return k === 'all' || periodKeyOf(x.date) === (k === 'cur' ? curPeriodKey() : Number(k)); }
+function pfPeople() { return visibleMembers().map(m => m.name); }
+// 追蹤系統的名字（潔薇）→ 業務地圖／年度計畫的全名（陳潔薇）
+function pfFull(n) {
+  const ps = (R.people || []).map(p => p.name);
+  if (ps.includes(n)) return n;
+  const hit = ps.filter(p => n.length >= 2 && p.endsWith(n));
+  return hit.length === 1 ? hit[0] : n;
+}
+async function perfLoad() {
+  if (!isAdmin()) { PF.loaded = false; return; }
+  try {
+    const d = await apiGet({ action:'perfRead' });
+    if (!d.ok) throw new Error(d.error || 'load failed');
+    PF.records = d.records || []; PF.today = d.today; PF.loaded = true; PF.err = '';
+  } catch (e) { PF.err = e.message; }
+}
+async function perfCall(o, msg) {
+  try {
+    const r = await apiGet({ action:'perfOp', op: JSON.stringify(o) });
+    if (!r.ok) throw new Error(r.error);
+    PF.records = r.data.records || []; PF.form = null; toast(msg); renderPerf(); return true;
+  } catch (e) { toast(PF_ERR[e.message] || '儲存失敗：' + e.message, 3500); return false; }
+}
+function pfPeriodOpts(sel) {
+  const ks = new Set([curPeriodKey()]);
+  PF.records.forEach(x => { const k = periodKeyOf(x.date); if (k != null) ks.add(k); });
+  return `<option value="cur"${sel === 'cur' ? ' selected' : ''}>本期（${periodShort(curPeriodKey())}）</option>`
+    + [...ks].filter(k => k !== curPeriodKey()).sort((a, b) => b - a).map(k => `<option value="${k}"${String(sel) === String(k) ? ' selected' : ''}>${periodShort(k)}</option>`).join('')
+    + `<option value="all"${sel === 'all' ? ' selected' : ''}>全部</option>`;
+}
+function renderPerf() {
+  const body = document.getElementById('perf-body');
+  if (!body) return;
+  if (!isAdmin()) { body.innerHTML = ''; return; }
+  if (!PF.loaded) { body.innerHTML = PF.err ? `<div class="rot-note" style="background:var(--red-light);color:var(--red)">表現紀錄載入失敗：${esc(PF.err)}。請確認 Apps Script 已加入 Perf.gs 並部署新版本。</div>` : '<div class="rot-note">載入中…</div>'; return; }
+  const inP = PF.records.filter(x => pfInPeriod(x, PF.period));
+  const openT = PF.records.filter(pfOpenTrack), due = PF.records.filter(pfDue);
+  let list = inP.filter(x => (!PF.person || x.name === PF.person) && (!PF.type || x.type === PF.type) && (!PF.onlyTrack || pfOpenTrack(x)));
+  if (PF.due) list = PF.records.filter(pfDue).filter(x => !PF.person || x.name === PF.person);
+  list = list.slice().sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : (a.at < b.at ? 1 : -1));
+  const cnt = t => inP.filter(x => x.type === t).length;
+  body.innerHTML = `
+  <div class="rot-note" style="margin-bottom:12px">🔒 這一頁只有主管看得到；同仁、專用帳號登入都看不到，後端也不會給資料。</div>
+  <div class="rot-stats">
+    <div class="stat-card"><div class="label">${PF.period === 'all' ? '全部' : PF.period === 'cur' ? '本期' : periodShort(Number(PF.period))}紀錄</div><div class="value">${inP.length}<small>筆</small></div><div class="sub">👍 ${cnt('good')}・⚠️ ${cnt('improve')}・📌 ${cnt('note')}</div></div>
+    <div class="stat-card clickable" onclick="PF.onlyTrack=true;PF.due=false;renderPerf()"><div class="label" style="color:var(--orange)">待追蹤</div><div class="value" style="color:${openT.length ? 'var(--orange)' : 'inherit'}">${openT.length}<small>筆</small></div><div class="sub">待處理／追蹤中／未改善</div></div>
+    <div class="stat-card clickable" onclick="PF.due=true;renderPerf()"><div class="label" style="color:var(--red)">追蹤日已到</div><div class="value" style="color:${due.length ? 'var(--red)' : 'inherit'}">${due.length}<small>筆</small></div><div class="sub">點一下列出來</div></div>
+  </div>
+  <div class="filter-bar" style="margin-bottom:12px">
+    <label>同仁：</label><select onchange="PF.person=this.value;renderPerf()"><option value="">全部</option>${pfPeople().map(n => `<option${PF.person === n ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select>
+    <label>類型：</label><select onchange="PF.type=this.value;renderPerf()"><option value="">全部</option>${Object.entries(PF_TYPE).map(([k, v]) => `<option value="${k}"${PF.type === k ? ' selected' : ''}>${v}</option>`).join('')}</select>
+    <label>期間：</label><select onchange="PF.period=this.value;renderPerf()">${pfPeriodOpts(PF.period)}</select>
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" ${PF.onlyTrack ? 'checked' : ''} onchange="PF.onlyTrack=this.checked;PF.due=false;renderPerf()" style="width:auto"> 只看待追蹤</label>
+    <span style="margin-left:auto;display:flex;gap:6px"><button class="btn btn-sm btn-primary" onclick="pfEdit('')">＋ 新增紀錄</button><button class="btn btn-sm btn-default" onclick="pfInterview()">🖨 面談資料</button></span>
+  </div>
+  ${PF.due ? `<div class="rot-note" style="margin-bottom:8px">只顯示「追蹤日已到」的紀錄　<a href="javascript:void 0" onclick="PF.due=false;renderPerf()">顯示全部</a></div>` : ''}
+  ${list.map(pfCard).join('') || '<div class="rot-empty" style="padding:24px">沒有符合條件的紀錄</div>'}`;
+}
+function pfCard(x) {
+  const it = (R.itemsAll || R.items || []).find(i => i.id === x.gid);
+  const f = PF.form && PF.form.id === x.id;
+  let h = `<div class="plan-item" id="pf-${x.id}">
+    <div class="top"><div class="what">${esc(rocDate(x.date))}　${rotChip ? rotChip(pfFull(x.name)) : esc(x.name)}　${PF_TYPE[x.type] || ''}</div>
+      ${x.track ? `<span class="plan-st ${x.status === 'improved' || x.status === 'closed' ? 'done' : x.status === 'notimproved' ? 'overdue' : pfDue(x) ? 'overdue' : 'submitted'}">${PF_ST[x.status] || ''}${pfDue(x) ? '・追蹤日已到' : ''}</span>` : ''}</div>
+    <div style="white-space:pre-wrap;margin:6px 0">${esc(x.text)}</div>
+    <div class="meta">${it ? `<span>📌 ${esc(it.id)} ${esc(it.name)}</span>` : ''}
+      ${x.track ? `<span>處理方式：${esc(x.way || '—')}</span><span>下次追蹤：${x.next ? esc(rocDate(x.next)) : '—'}</span>` : ''}
+      ${x.type === 'good' ? `<span>${x.fb && x.fb.done ? `✅ 已回饋（${esc(x.fb.way || '')}）` : '尚未回饋'}</span>` : ''}</div>
+    ${(x.follow || []).length ? `<div class="plan-log">${x.follow.map(l => `<div><span>${esc(rocDate(l.date))}</span>　${esc(l.text)}${l.status ? `　<b>${esc(PF_ST[l.status] || '')}</b>` : ''}</div>`).join('')}</div>` : ''}
+    <div class="btns">${x.track || x.type === 'improve' ? `<button class="btn btn-sm btn-primary" onclick="PF.form={id:'${x.id}'};renderPerf()">＋ 追蹤紀錄</button>` : ''}
+      <button class="btn btn-sm btn-default" onclick="pfEdit('${x.id}')">修改</button>
+      <button class="btn btn-sm btn-danger" onclick="pfDel('${x.id}')">刪除</button></div>`;
+  if (f) h += `<div class="rot-form" style="display:block;margin-top:8px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">日期 <input type="date" id="pff-date" value="${pfToday()}" max="${pfToday()}">
+        狀態 <select id="pff-st">${Object.entries(PF_ST).map(([k, v]) => `<option value="${k}"${(x.status || 'tracking') === k || (!x.status && k === 'tracking') ? ' selected' : ''}>${v}</option>`).join('')}</select>
+        下次追蹤 <input type="date" id="pff-next" value="${x.next || ''}"></div>
+      <input id="pff-text" placeholder="這次追蹤的情形（一句話）" style="width:100%;margin-top:6px">
+      <div style="margin-top:6px;display:flex;gap:6px"><button class="btn btn-sm btn-primary" onclick="pfFollow('${x.id}')">儲存</button><button class="btn btn-sm btn-default" onclick="PF.form=null;renderPerf()">取消</button></div></div>`;
+  return h + `</div>`;
+}
+async function pfFollow(id) {
+  const text = document.getElementById('pff-text').value.trim();
+  if (!text) { toast('請寫追蹤情形'); return; }
+  await perfCall({ type:'follow', id, date:document.getElementById('pff-date').value, status:document.getElementById('pff-st').value, next:document.getElementById('pff-next').value, text }, '已記錄追蹤');
+}
+async function pfDel(id) { if (confirm('刪除這筆紀錄？刪除後無法復原。')) await perfCall({ type:'del', id }, '已刪除'); }
+function pfEdit(id) {
+  const x = id ? PF.records.find(r => r.id === id) : { id:'', date:pfToday(), name:PF.person || '', type:'note', text:'', gid:'', track:false, way:'', next:'', status:'', fb:null };
+  PF.edit = JSON.parse(JSON.stringify(x));
+  pfEditRender();
+  document.getElementById('perf-modal').classList.add('active');
+}
+function pfEditRender() {
+  const e = PF.edit;
+  const items = (R.items || []);
+  document.getElementById('perf-modal-box').innerHTML = `<h2>${e.id ? '修改紀錄' : '新增表現紀錄'}</h2>
+    <div class="modal-form-2col">
+      <div class="modal-form-row"><label>日期</label><input type="date" id="pe2-date" value="${e.date}" max="${pfToday()}"></div>
+      <div class="modal-form-row"><label>同仁 *</label><select id="pe2-name"><option value="">請選擇</option>${pfPeople().map(n => `<option${e.name === n ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></div>
+    </div>
+    <div class="modal-form-row"><label>類型 *</label><div class="plan-cats">${Object.entries(PF_TYPE).map(([k, v]) => `<label class="${e.type === k ? 'on' : ''}"><input type="radio" name="pe2-type" value="${k}"${e.type === k ? ' checked' : ''} onchange="pfGrab();PF.edit.type='${k}';if('${k}'==='improve')PF.edit.track=true;pfEditRender()"> ${v}</label>`).join('')}</div></div>
+    <div class="modal-form-row"><label>內容 *</label><textarea id="pe2-text" rows="4" placeholder="具體發生什麼事（時間、事件、影響）">${esc(e.text)}</textarea></div>
+    <div class="modal-form-row"><label>相關業務（選填）</label><select id="pe2-gid"><option value="">—</option>${items.map(i => `<option value="${i.id}"${e.gid === i.id ? ' selected' : ''}>${i.id} ${esc(i.name)}</option>`).join('')}</select></div>
+    ${e.type === 'good' ? `<div class="modal-form-row"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="pe2-fb" style="width:auto" ${e.fb && e.fb.done ? 'checked' : ''}> 已回饋給同仁</label>
+      <select id="pe2-fbway">${PF_FB.map(w => `<option${e.fb && e.fb.way === w ? ' selected' : ''}>${w}</option>`).join('')}</select></div>` : ''}
+    <div class="modal-form-row"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="pe2-track" style="width:auto" ${e.track ? 'checked' : ''} onchange="pfGrab();PF.edit.track=this.checked;pfEditRender()"> 需要追蹤${e.type === 'improve' ? '（待改進預設要追蹤）' : ''}</label></div>
+    ${e.track ? `<div class="modal-form-2col">
+      <div class="modal-form-row"><label>處理方式</label><select id="pe2-way">${PF_WAYS.map(w => `<option${e.way === w ? ' selected' : ''}>${w}</option>`).join('')}</select></div>
+      <div class="modal-form-row"><label>下次追蹤日</label><input type="date" id="pe2-next" value="${e.next || ''}"></div></div>
+      <div class="modal-form-row"><label>狀態</label><select id="pe2-st">${Object.entries(PF_ST).map(([k, v]) => `<option value="${k}"${(e.status || 'pending') === k ? ' selected' : ''}>${v}</option>`).join('')}</select></div>` : ''}
+    <div class="modal-actions"><button class="btn btn-default" onclick="pfEditClose()">取消</button><button class="btn btn-primary" onclick="pfSave()">儲存</button></div>`;
+}
+function pfGrab() {
+  const v = id => { const el = document.getElementById(id); return el ? (el.type === 'checkbox' ? el.checked : el.value) : undefined; };
+  const e = PF.edit;
+  [['date', 'pe2-date'], ['name', 'pe2-name'], ['text', 'pe2-text'], ['gid', 'pe2-gid'], ['way', 'pe2-way'], ['next', 'pe2-next'], ['status', 'pe2-st']].forEach(([k, id]) => { const x = v(id); if (x !== undefined) e[k] = x; });
+  if (document.getElementById('pe2-fb')) e.fb = { done: v('pe2-fb'), way: v('pe2-fbway') };
+}
+function pfEditClose() { document.getElementById('perf-modal').classList.remove('active'); PF.edit = null; }
+async function pfSave() {
+  pfGrab();
+  const e = PF.edit;
+  if (!e.name) { toast('請選同仁'); return; }
+  if (!e.text.trim()) { toast('請寫內容'); return; }
+  const ok = await perfCall({ type:'save', id:e.id || undefined, date:e.date, name:e.name, type2:e.type, text:e.text, gid:e.gid, track:!!e.track, way:e.way, next:e.next, status:e.status, fb:e.type === 'good' ? e.fb : undefined }, '已儲存');
+  if (ok) pfEditClose();
+}
+
+// ── 面談資料（選同仁＋期間，可列印／存 PDF）──
+async function pfInterview() {
+  if (!P.loaded) await planLoad();
+  PF.iv = { name: PF.person || pfPeople()[0] || '', period: PF.period === 'all' ? 'cur' : PF.period };
+  pfIvRender();
+  document.getElementById('perf-iv').classList.add('active');
+}
+function pfIvRender() {
+  const iv = PF.iv, n = iv.name, full = pfFull(n);
+  const k = iv.period === 'cur' ? curPeriodKey() : Number(iv.period);
+  const recs = PF.records.filter(x => x.name === n && periodKeyOf(x.date) === k).sort((a, b) => a.date < b.date ? -1 : 1);
+  const p = (R.people || []).find(x => x.name === full);
+  const dl = calcDelay(n, k);
+  const lateItems = G.items.filter(it => it.deadline && it.members.includes(n) && itemInPeriod(it, k))
+    .filter(it => ['overdue', 'late'].includes(getEffStatus(it.id, n, it.deadline, it.deadtime)));
+  const cnt = t => G.items.filter(it => it.type === t && it.members.includes(n) && itemInPeriod(it, k)).length;
+  const plans = (P.items || []).filter(x => x.name === full && x.status !== 'cancelled');
+  const cur = (R.items || []).filter(it => it.owners.includes(full));
+  const past = (R.items || []).filter(it => rotRel(it, full) === 'past');
+  const hi = (R.subs || []).filter(x => rotOwnersOf(x).includes(full) && ((x.diff != null && x.diff >= R.highDiff) || !rotNoHelp(x.help)));
+  const sec = (t, html) => `<div class="iv-sec"><h4>${t}</h4>${html}</div>`;
+  const recList = t => { const xs = recs.filter(x => x.type === t); return xs.length ? `<ul>${xs.map(x => `<li><b>${esc(rocDate(x.date))}</b>　${esc(x.text)}
+      ${t === 'good' ? `<span class="iv-mute">（${x.fb && x.fb.done ? '已回饋：' + esc(x.fb.way || '') : '尚未回饋'}）</span>` : ''}
+      ${x.track ? `<div class="iv-mute">處理方式：${esc(x.way || '—')}　目前狀態：<b>${esc(PF_ST[x.status] || '')}</b></div>${(x.follow || []).map(l => `<div class="iv-mute">・${esc(rocDate(l.date))} ${esc(l.text)}</div>`).join('')}` : ''}</li>`).join('')}</ul>` : '<div class="iv-mute">無</div>'; };
+  document.getElementById('perf-iv-box').innerHTML = `
+    <div class="iv-bar no-print">同仁 <select onchange="PF.iv.name=this.value;pfIvRender()">${pfPeople().map(x => `<option${x === n ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>
+      期間 <select onchange="PF.iv.period=this.value;pfIvRender()">${pfPeriodOpts(iv.period).replace(/<option value="all"[^>]*>全部<\/option>/, '')}</select>
+      <span style="margin-left:auto;display:flex;gap:6px"><button class="btn btn-sm btn-primary" onclick="pfIvPrint()">🖨 列印／存 PDF</button><button class="btn btn-sm btn-default" onclick="document.getElementById('perf-iv').classList.remove('active')">關閉</button></span></div>
+    <div id="perf-print">
+      <h2 style="margin:0 0 4px">${esc(full)}　年度面談資料</h2>
+      <div class="iv-mute">考核期間 ${esc(periodLabel(k))}${p && p.onboard ? `　到職 ${esc(p.onboard)}・年資 ${rotTenure(p.onboard)}` : ''}　（主管限定，請勿外流）</div>
+      ${sec('一、表現紀錄', `<div class="iv-h">👍 優良表現</div>${recList('good')}<div class="iv-h">⚠️ 待改進（含處理與追蹤）</div>${recList('improve')}<div class="iv-h">📌 一般紀錄</div>${recList('note')}`)}
+      ${sec('二、任務執行', `<div>延遲率：<b>${dl ? dl.rate + '%' : '—'}</b>${dl ? `（${dl.delayed} / ${dl.total} 項有截止日的任務）` : '（本期尚無有截止日的任務）'}</div>
+        ${lateItems.length ? `<ul>${lateItems.map(it => `<li>${esc(it.name)}　<span class="iv-mute">截止 ${esc(it.deadline)}</span></li>`).join('')}</ul>` : ''}
+        <div>交辦：追蹤期限 ${cnt('temp')} 件、免追蹤 ${cnt('tempq')} 件；專案 ${cnt('project')} 件</div>`)}
+      ${sec(`三、年度計畫${P.year ? `（${planRoc(P.year)} 年）` : ''}`, plans.length ? `<table class="iv-tbl"><thead><tr><th>類別</th><th>內容</th><th>預計完成</th><th>狀態</th></tr></thead><tbody>${plans.map(x => `<tr><td>${esc(PLAN_CAT[x.cat] || '')}</td><td>${esc(x.what)}</td><td>${esc(x.ym || '')}</td><td>${planOverdue(x) ? '逾期未完成' : esc(PLAN_ST[x.status] || '')}${x.done ? '（' + esc(rocDate(x.done.date)) + '）' : ''}</td></tr>`).join('')}</tbody></table>` : '<div class="iv-mute">無</div>')}
+      ${sec('四、負責業務與熟悉度', `<table class="iv-tbl"><thead><tr><th>目前負責</th><th>熟悉度</th></tr></thead><tbody>${cur.map(it => `<tr><td>${esc(it.id)} ${esc(it.name)}</td><td>${rotBadge(rotScoreOf(it, full))}</td></tr>`).join('') || '<tr><td colspan="2" class="iv-mute">無</td></tr>'}</tbody></table>
+        ${past.length ? `<div class="iv-mute" style="margin-top:6px">曾經負責：${past.map(it => `${esc(it.id)} ${esc(it.name)}（${rotBadge(rotScoreOf(it, full))}）`).join('、')}</div>` : ''}`)}
+      ${sec('五、細項自評：高難度與需要協助', hi.length ? `<table class="iv-tbl"><thead><tr><th>細項</th><th>自評</th><th>需要協助</th><th>主管處理</th></tr></thead><tbody>${hi.map(x => `<tr><td>${esc(x.gid)} ${esc(x.name)}</td><td>${x.diff != null ? x.diff : '—'}</td><td>${rotNoHelp(x.help) ? '未填' : esc(x.help)}</td><td>${esc(ROT_ACTS[x.act] || '—')}</td></tr>`).join('')}</tbody></table>` : '<div class="iv-mute">無</div>')}
+      <div class="iv-sec"><h4>六、面談紀錄</h4><div style="height:120px;border:1px dashed var(--border);border-radius:6px"></div></div>
+      <div class="iv-mute" style="margin-top:8px">列印時間：${esc(nowStr().replace('T', ' '))}</div>
+    </div>`;
+}
+function pfIvPrint() {
+  document.body.classList.add('print-perf');
+  window.print();
+  setTimeout(() => document.body.classList.remove('print-perf'), 500);
 }
 
 
