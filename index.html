@@ -4197,6 +4197,12 @@ const PF_TYPE = { good:'👍 優良表現', improve:'⚠️ 待改進', note:'�
 const PF_WAYS = ['口頭提醒', '面談溝通', '安排訓練或資深同仁帶著做', '調整業務分工', '列入考核', '其他'];
 const PF_ST = { pending:'待處理', tracking:'追蹤中', improved:'已改善', notimproved:'未改善', closed:'結案' };
 const PF_FB = ['口頭肯定', '公開表揚', '列入考核加分'];
+const PF_HANDLE = ['當場指導', '口頭提醒', '示範操作', '提供範本／SOP'];
+function pfAddHandle(w) {
+  const el = document.getElementById('pe2-handled');
+  el.value = el.value.trim() ? el.value.trim() + '、' + w : w;
+  el.focus();
+}
 const PF_ERR = { forbidden:'只有主管可以使用', 'missing text':'請寫內容', 'missing type':'請選類型', 'missing name':'請選同仁', 'future date':'日期不能晚於今天', 'bad date':'日期格式錯誤' };
 function pfToday() { return PF.today || todayStr(); }
 function pfOpenTrack(x) { return x.track && ['pending', 'tracking', 'notimproved'].includes(x.status); }
@@ -4267,6 +4273,7 @@ function pfCard(x) {
     <div class="top"><div class="what">${esc(rocDate(x.date))}　${rotChip ? rotChip(pfFull(x.name)) : esc(x.name)}　${PF_TYPE[x.type] || ''}</div>
       ${x.track ? `<span class="plan-st ${x.status === 'improved' || x.status === 'closed' ? 'done' : x.status === 'notimproved' ? 'overdue' : pfDue(x) ? 'overdue' : 'submitted'}">${PF_ST[x.status] || ''}${pfDue(x) ? '・追蹤日已到' : ''}</span>` : ''}</div>
     <div style="white-space:pre-wrap;margin:6px 0">${esc(x.text)}</div>
+    ${x.handled ? `<div style="font-size:13px;margin:-2px 0 6px"><b style="color:var(--text2)">當下處理：</b>${esc(x.handled)}</div>` : ''}
     <div class="meta">${it ? `<span>📌 ${esc(it.id)} ${esc(it.name)}</span>` : ''}
       ${x.track ? `<span>處理方式：${esc(x.way || '—')}</span><span>下次追蹤：${x.next ? esc(rocDate(x.next)) : '—'}</span>` : ''}
       ${x.type === 'good' ? `<span>${x.fb && x.fb.done ? `✅ 已回饋（${esc(x.fb.way || '')}）` : '尚未回饋'}</span>` : ''}</div>
@@ -4289,7 +4296,7 @@ async function pfFollow(id) {
 }
 async function pfDel(id) { if (confirm('刪除這筆紀錄？刪除後無法復原。')) await perfCall({ type:'del', id }, '已刪除'); }
 function pfEdit(id) {
-  const x = id ? PF.records.find(r => r.id === id) : { id:'', date:pfToday(), name:PF.person || '', type:'note', text:'', gid:'', track:false, way:'', next:'', status:'', fb:null };
+  const x = id ? PF.records.find(r => r.id === id) : { id:'', date:pfToday(), name:PF.person || '', type:'note', text:'', handled:'', gid:'', track:false, way:'', next:'', status:'', fb:null };
   PF.edit = JSON.parse(JSON.stringify(x));
   pfEditRender();
   document.getElementById('perf-modal').classList.add('active');
@@ -4304,6 +4311,9 @@ function pfEditRender() {
     </div>
     <div class="modal-form-row"><label>類型 *</label><div class="plan-cats">${Object.entries(PF_TYPE).map(([k, v]) => `<label class="${e.type === k ? 'on' : ''}"><input type="radio" name="pe2-type" value="${k}"${e.type === k ? ' checked' : ''} onchange="pfGrab();PF.edit.type='${k}';if('${k}'==='improve')PF.edit.track=true;pfEditRender()"> ${v}</label>`).join('')}</div></div>
     <div class="modal-form-row"><label>內容 *</label><textarea id="pe2-text" rows="4" placeholder="具體發生什麼事（時間、事件、影響）">${esc(e.text)}</textarea></div>
+    <div class="modal-form-row"><label>當下怎麼處理（選填）</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">${PF_HANDLE.map(w => `<button type="button" class="btn btn-sm btn-default" onclick="pfAddHandle('${w}')">${w}</button>`).join('')}</div>
+      <textarea id="pe2-handled" rows="2" placeholder="例：當場說明正確流程，並示範一次">${esc(e.handled || '')}</textarea></div>
     <div class="modal-form-row"><label>相關業務（選填）</label><select id="pe2-gid"><option value="">—</option>${items.map(i => `<option value="${i.id}"${e.gid === i.id ? ' selected' : ''}>${i.id} ${esc(i.name)}</option>`).join('')}</select></div>
     ${e.type === 'good' ? `<div class="modal-form-row"><label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="pe2-fb" style="width:auto" ${e.fb && e.fb.done ? 'checked' : ''}> 已回饋給同仁</label>
       <select id="pe2-fbway">${PF_FB.map(w => `<option${e.fb && e.fb.way === w ? ' selected' : ''}>${w}</option>`).join('')}</select></div>` : ''}
@@ -4317,7 +4327,7 @@ function pfEditRender() {
 function pfGrab() {
   const v = id => { const el = document.getElementById(id); return el ? (el.type === 'checkbox' ? el.checked : el.value) : undefined; };
   const e = PF.edit;
-  [['date', 'pe2-date'], ['name', 'pe2-name'], ['text', 'pe2-text'], ['gid', 'pe2-gid'], ['way', 'pe2-way'], ['next', 'pe2-next'], ['status', 'pe2-st']].forEach(([k, id]) => { const x = v(id); if (x !== undefined) e[k] = x; });
+  [['date', 'pe2-date'], ['name', 'pe2-name'], ['text', 'pe2-text'], ['handled', 'pe2-handled'], ['gid', 'pe2-gid'], ['way', 'pe2-way'], ['next', 'pe2-next'], ['status', 'pe2-st']].forEach(([k, id]) => { const x = v(id); if (x !== undefined) e[k] = x; });
   if (document.getElementById('pe2-fb')) e.fb = { done: v('pe2-fb'), way: v('pe2-fbway') };
 }
 function pfEditClose() { document.getElementById('perf-modal').classList.remove('active'); PF.edit = null; }
@@ -4326,7 +4336,7 @@ async function pfSave() {
   const e = PF.edit;
   if (!e.name) { toast('請選同仁'); return; }
   if (!e.text.trim()) { toast('請寫內容'); return; }
-  const ok = await perfCall({ type:'save', id:e.id || undefined, date:e.date, name:e.name, type2:e.type, text:e.text, gid:e.gid, track:!!e.track, way:e.way, next:e.next, status:e.status, fb:e.type === 'good' ? e.fb : undefined }, '已儲存');
+  const ok = await perfCall({ type:'save', id:e.id || undefined, date:e.date, name:e.name, type2:e.type, text:e.text, handled:e.handled, gid:e.gid, track:!!e.track, way:e.way, next:e.next, status:e.status, fb:e.type === 'good' ? e.fb : undefined }, '已儲存');
   if (ok) pfEditClose();
 }
 
@@ -4352,6 +4362,7 @@ function pfIvRender() {
   const hi = (R.subs || []).filter(x => rotOwnersOf(x).includes(full) && ((x.diff != null && x.diff >= R.highDiff) || !rotNoHelp(x.help)));
   const sec = (t, html) => `<div class="iv-sec"><h4>${t}</h4>${html}</div>`;
   const recList = t => { const xs = recs.filter(x => x.type === t); return xs.length ? `<ul>${xs.map(x => `<li><b>${esc(rocDate(x.date))}</b>　${esc(x.text)}
+      ${x.handled ? `<div class="iv-mute">當下處理：${esc(x.handled)}</div>` : ''}
       ${t === 'good' ? `<span class="iv-mute">（${x.fb && x.fb.done ? '已回饋：' + esc(x.fb.way || '') : '尚未回饋'}）</span>` : ''}
       ${x.track ? `<div class="iv-mute">處理方式：${esc(x.way || '—')}　目前狀態：<b>${esc(PF_ST[x.status] || '')}</b></div>${(x.follow || []).map(l => `<div class="iv-mute">・${esc(rocDate(l.date))} ${esc(l.text)}</div>`).join('')}` : ''}</li>`).join('')}</ul>` : '<div class="iv-mute">無</div>'; };
   document.getElementById('perf-iv-box').innerHTML = `
