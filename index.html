@@ -1882,8 +1882,8 @@ function renderItemRow(it, members, indent) {
       ? `onclick="openPicker(event,'${it.id}','${m.name}','${it.deadline||''}','${it.deadtime||''}')"` : '';
     const ent = getEntry(it.id, m.name);
     const dl = effDeadline(it.id, m.name, it.deadline, it.deadtime);
-    const tip = (ent.status === 'wait' ? `等待資料：${ent.waitReason||''}` : '') + (ent.noDelay ? `${ent.status === 'wait' ? '；' : ''}不計延遲率${ent.noDelay.note ? '：' + ent.noDelay.note : ''}` : '');
-    const flag = ent.noDelay ? '<span class="dl-flag" style="background:#ecfdf5;color:var(--green);border-color:#a7f3d0">免計</span>' : '';
+    const tip = (ent.status === 'wait' ? `等待資料：${ent.waitReason||''}` : '') + (ent.noDelay && isAdmin() ? `${ent.status === 'wait' ? '；' : ''}不計延遲率${ent.noDelay.note ? '：' + ent.noDelay.note : ''}` : '');
+    const flag = ent.noDelay && isAdmin() ? '<span class="dl-flag" style="background:#ecfdf5;color:var(--green);border-color:#a7f3d0">免計</span>' : '';
     html += `<td class="status-cell"><button class="status-btn ${cls}" ${click} title="${tip.replace(/"/g,'&quot;')}">${label}${flag}</button></td>`;
   });
   html += '</tr>';
