@@ -1320,10 +1320,27 @@ function getEntry(itemId, memberName) {
 }
 
 // 這位同仁這筆任務的有效期限：有個人期限（等待資料後提出／核准）就用個人的，否則用任務截止日
+// 115/11/27：一律用任務原截止日（不再有個人新期限／核准）；理由是否充分由主管按「不計延遲率」決定
 function effDeadline(itemId, memberName, deadline, deadtime) {
-  const e = getEntry(itemId, memberName);
-  if (e.dl && e.dl.date) return { date: e.dl.date, time: e.dl.time || '17:00', personal: true, pending: e.dl.state === 'pending' };
   return { date: deadline, time: deadtime, personal: false, pending: false };
+}
+// 延遲判斷：'exempt' 主管設不計／'late' 延遲（逾期未完成、晚交、等待資料但已過截止）／'ok'
+function delayEval(it, name) {
+  const e = getEntry(it.id, name);
+  if (e.noDelay) return 'exempt';
+  const eff = getEffStatus(it.id, name, it.deadline, it.deadtime);
+  if (eff === 'overdue' || eff === 'late') return 'late';
+  if (eff === 'wait' && it.deadline && nowStr() > `${it.deadline}T${it.deadtime || '23:59'}`) return 'late';
+  return 'ok';
+}
+async function setExempt(itemId, name, on) {
+  let note = '';
+  if (on) { const v = prompt(`「${name}」這一項不計延遲率？\n可以寫一句說明（選填）：`, ''); if (v === null) return; note = v.trim(); }
+  else if (!confirm(`取消「${name}」這一項的「不計延遲率」？`)) return;
+  const pk = document.getElementById('status-picker'); if (pk) pk.style.display = 'none';
+  if (await pushStatus(itemId, name, null, { op:'exempt', on: on ? '1' : '0', note })) {
+    renderMatrix(); renderOverview(); toast(on ? '已設為不計延遲率' : '已取消不計延遲率');
+  }
 }
 // 等待資料累計天數
 function waitDays(entry) {
@@ -1342,7 +1359,7 @@ function getEffStatus(itemId, memberName, deadline, deadtime) {
   const deadDT = dl.time ? `${dl.date}T${dl.time}` : `${dl.date}T23:59`;
   const nowDT  = nowStr();
   if (s === '0' && nowDT > deadDT) return 'overdue';
-  if (s === 'done' && (e.byAdmin || e.fromWait)) return 'done';  // 管理員未填日期／資料到後直接完成：準時
+  if (s === 'done' && e.byAdmin) return 'done';  // 管理員按完成、未填日期：準時
   if (s === 'done' && e.completedAt && e.completedAt > deadDT) return 'late';
   return s;
 }
@@ -1374,14 +1391,11 @@ function allPeriodKeys() {
 }
 function calcDelay(memberName, k) {
   if (k === undefined) k = curPeriodKey();
-  const with_dl = G.items.filter(it => it.deadline && it.members.includes(memberName) && itemInPeriod(it, k));
+  const all = G.items.filter(it => it.deadline && it.members.includes(memberName) && itemInPeriod(it, k));
+  const with_dl = all.filter(it => delayEval(it, memberName) !== 'exempt');   // 主管設不計的不算分子也不算分母
   if (!with_dl.length) return null;
-  let delayed = 0;
-  with_dl.forEach(it => {
-    const eff = getEffStatus(it.id, memberName, it.deadline, it.deadtime);
-    if (eff === 'overdue' || eff === 'late') delayed++;
-  });
-  return { delayed, total: with_dl.length, rate: (delayed/with_dl.length*100).toFixed(1) };
+  const delayed = with_dl.filter(it => delayEval(it, memberName) === 'late').length;
+  return { delayed, total: with_dl.length, exempt: all.length - with_dl.length, rate: (delayed/with_dl.length*100).toFixed(1) };
 }
 
 // ══════════════════════════════════════════════
@@ -1439,12 +1453,7 @@ function renderOverview() {
       <div class="value" style="color:var(--red)">${overdue}<small>人次</small></div>
       <div class="sub">${overdue ? (_ovPanel==='overdue' ? '收合名單 ▴' : '點選查看名單 ▾') : '目前沒有逾期'}</div>
     </div>
-    ${isAdmin() ? `<div class="stat-card clickable pend ${_ovPanel==='pending'?'open':''}" role="button" tabindex="0"
-         onclick="toggleOvPanel('pending')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleOvPanel('pending');}">
-      <div class="label" style="color:var(--orange)">期限待審核</div>
-      <div class="value" style="color:var(--orange)">${pending}<small>筆</small></div>
-      <div class="sub">${pending ? (_ovPanel==='pending' ? '收合 ▴' : '點選審核 ▾') : '沒有待審核的期限'}</div>
-    </div>` : ''}
+
   `;
   renderOverduePanel();
   renderDueSection(fp);
@@ -1506,19 +1515,21 @@ function delayTableHtml(k) {
 
   // calcDelay but filtered by type and period
   function calcDelayFiltered(memberName) {
-    let withDl = G.items.filter(it => it.deadline && it.members.includes(memberName) && itemInPeriod(it, k));
-    if (ft) withDl = withDl.filter(it => it.type === ft);
-    if (!withDl.length) return null;
+    let all = G.items.filter(it => it.deadline && it.members.includes(memberName) && itemInPeriod(it, k));
+    if (ft) all = all.filter(it => it.type === ft);
+    const withDl = all.filter(it => delayEval(it, memberName) !== 'exempt');
+    const exemptItems = all.filter(it => delayEval(it, memberName) === 'exempt').map(it => ({ id: it.id, name: it.name, note: (getEntry(it.id, memberName).noDelay || {}).note || '' }));
+    if (!withDl.length && !exemptItems.length) return null;
     let delayed = 0;
     const delayedItems = [];
     withDl.forEach(it => {
-      const eff = getEffStatus(it.id, memberName, it.deadline, it.deadtime);
-      if (eff === 'overdue' || eff === 'late') {
+      if (delayEval(it, memberName) === 'late') {
         delayed++;
-        delayedItems.push({ name: it.name, type: it.type, eff, wd: waitDays(getEntry(it.id, memberName)) });
+        const en = getEntry(it.id, memberName);
+        delayedItems.push({ id: it.id, name: it.name, type: it.type, eff: getEffStatus(it.id, memberName, it.deadline, it.deadtime), wd: waitDays(en), reason: en.waitReason || ((en.waits || []).slice(-1)[0] || {}).reason || '' });
       }
     });
-    return { delayed, total: withDl.length, rate: (delayed/withDl.length*100).toFixed(1), delayedItems };
+    return { delayed, total: withDl.length, rate: withDl.length ? (delayed/withDl.length*100).toFixed(1) : '0.0', delayedItems, exemptItems };
   }
 
   const typeLabel = {
@@ -1541,14 +1552,16 @@ function delayTableHtml(k) {
     const subList = dl.delayedItems.length
       ? `<div style="margin-top:4px;font-size:11px;color:var(--text2);">${
           dl.delayedItems.map(i => {
-            const effLabel = i.eff === 'overdue' ? '⏰逾期未完成' : '⚠️晚交';
-            return `${i.name}（${typeLabel[i.type]||i.type}）${effLabel}${i.wd >= 0.5 ? `・曾等待資料 ${Math.round(i.wd)} 天` : ''}`;
-          }).join('、')
+            const effLabel = i.eff === 'overdue' ? '⏰逾期未完成' : i.eff === 'wait' ? '⏸等待資料中（已過截止）' : '⚠️晚交';
+            return `<div>${esc(i.name)}（${typeLabel[i.type]||i.type}）${effLabel}${i.wd >= 0.5 ? `・曾等待資料 ${Math.round(i.wd)} 天` : ''}${i.reason ? `<span style="color:#6d28d9">（理由：${esc(i.reason)}）</span>` : ''}
+              <button class="btn btn-sm btn-default" style="padding:1px 6px;font-size:11px;margin-left:4px" onclick="setExempt('${i.id}','${m.name}',true)">不計延遲率</button></div>`;
+          }).join('')
         }</div>` : '';
+    const exList = dl.exemptItems.length ? `<div style="margin-top:4px;font-size:11px;color:var(--text2);">不計延遲率：${dl.exemptItems.map(i => `${esc(i.name)}${i.note ? '（' + esc(i.note) + '）' : ''} <a href="javascript:void 0" onclick="setExempt('${i.id}','${m.name}',false)">取消</a>`).join('、')}</div>` : '';
     return `<tr>
       <td><strong>${m.name}</strong></td>
       <td>${ft ? typeLabel[ft]||ft : '全部'}</td>
-      <td>${dl.delayed}${subList}</td>
+      <td>${dl.delayed}${subList}${exList}</td>
       <td>${dl.total}</td>
       <td style="${s};font-weight:600">${dl.rate}%</td>
     </tr>`;
@@ -1597,7 +1610,7 @@ function whoChip(it, name) {
   const eff = getEffStatus(it.id, name, it.deadline, it.deadtime);
   const { label, cls } = statusDisplay(eff);
   const dl = effDeadline(it.id, name, it.deadline, it.deadtime);
-  const extra = dl.personal && eff !== 'done' && eff !== 'late' ? `（新期限 ${dl.date.slice(5).replace('-','/')}${dl.pending ? ' 待核' : ''}）` : '';
+  const extra = '';
   return `<span class="who-chip ${cls}">${name}・${label}${extra}</span>`;
 }
 // 週一 ~ 週日
@@ -1660,7 +1673,10 @@ function renderOverduePanel() {
         <span class="ov-date">${fmtDue(r.it)}</span>
         <span class="ov-task">${r.it.name}<br>${typeTag(r.it.type)}</span>
         <span class="who-chip swait">👤 ${r.n}</span>
-        <span class="ov-reason">⏸ ${esc(r.en.waitReason || '')}<br><span style="color:var(--text2)">${r.since ? `${fmtMD(r.since.slice(0,10))} 起・已等 ${r.days} 天` : ''}</span></span>
+        <span class="ov-reason">⏸ ${esc(r.en.waitReason || '')}<br><span style="color:var(--text2)">${r.since ? `${fmtMD(r.since.slice(0,10))} 起・已等 ${r.days} 天` : ''}</span>
+          ${r.it.deadline && nowStr() > `${r.it.deadline}T${r.it.deadtime || '23:59'}` ? '<br><span style="color:var(--red);font-weight:600">已過截止日</span>' : ''}
+          ${isAdmin() ? (r.en.noDelay ? `<br><span style="color:var(--green)">✓ 不計延遲率</span> <a href="javascript:void 0" onclick="event.stopPropagation();setExempt('${r.it.id}','${r.n}',false)">取消</a>`
+            : `<br><button class="btn btn-sm btn-default" style="padding:1px 6px;font-size:11px" onclick="event.stopPropagation();setExempt('${r.it.id}','${r.n}',true)">不計延遲率</button>`) : ''}</span>
       </div>`;
     const id = `${r.it.id}__${r.n}`.replace(/[^\w]/g, '_');
     return `
@@ -1866,9 +1882,8 @@ function renderItemRow(it, members, indent) {
       ? `onclick="openPicker(event,'${it.id}','${m.name}','${it.deadline||''}','${it.deadtime||''}')"` : '';
     const ent = getEntry(it.id, m.name);
     const dl = effDeadline(it.id, m.name, it.deadline, it.deadtime);
-    const tip = ent.status === 'wait' ? `等待資料：${ent.waitReason||''}`
-      : dl.personal ? `個人期限 ${dl.date} ${dl.time}${dl.pending ? '（待主管核准）' : ''}` : '';
-    const flag = dl.pending && ent.status !== 'wait' ? '<span class="dl-flag">待核</span>' : (dl.personal && ent.status !== 'wait' ? '<span class="dl-flag" style="background:#eff4ff;color:var(--accent);border-color:#bfdbfe">新期</span>' : '');
+    const tip = (ent.status === 'wait' ? `等待資料：${ent.waitReason||''}` : '') + (ent.noDelay ? `${ent.status === 'wait' ? '；' : ''}不計延遲率${ent.noDelay.note ? '：' + ent.noDelay.note : ''}` : '');
+    const flag = ent.noDelay ? '<span class="dl-flag" style="background:#ecfdf5;color:var(--green);border-color:#a7f3d0">免計</span>' : '';
     html += `<td class="status-cell"><button class="status-btn ${cls}" ${click} title="${tip.replace(/"/g,'&quot;')}">${label}${flag}</button></td>`;
   });
   html += '</tr>';
@@ -1967,7 +1982,7 @@ async function selectStatus(val) {
   // 管理員點「已完成」→ 不立即關閉，顯示日期確認欄並重新定位
   const ent = getEntry(_pickerCtx.itemId, _pickerCtx.memberName);
   if (val === 'wait') { renderPickerExtra('wait'); return; }
-  if (val === '0' && ent.status === 'wait') { renderPickerExtra('resume'); return; }
+
   if (isAdmin() && val === 'done') {   // 只有主管能指定完成日期；同仁按下就記當下時間
     renderPickerExtra(null);
     const pk = document.getElementById('status-picker');
@@ -1998,7 +2013,7 @@ async function selectStatus(val) {
   document.getElementById('status-picker').style.display = 'none';
   if (!_pickerCtx) return;
   if (await pushStatus(_pickerCtx.itemId, _pickerCtx.memberName, val, null)) {
-    renderMatrix(); renderOverview(); toast(ent.status === 'wait' && val === 'done' ? '已完成（資料到後直接完成，算準時）' : '狀態已更新');
+    renderMatrix(); renderOverview(); toast('狀態已更新');
   }
 }
 
@@ -2014,7 +2029,7 @@ function renderPickerExtra(mode) {
     h += `<div class="px-sec"><label>⏸ 等待什麼資料／訊息？（必填）</label>
       <textarea id="px-reason" placeholder="例：等內科部回傳名單">${esc(ent.status === 'wait' ? (ent.waitReason || '') : '')}</textarea>
       <button class="px-btn" style="background:#7c3aed" onclick="event.stopPropagation();submitWait()">確認等待資料</button>
-      <div style="color:var(--text2);margin-top:4px">等待期間不算逾期；資料到後改回待辦，要填預計完成時間給主管核准</div></div>`;
+      <div style="color:var(--text2);margin-top:4px">資料到了、做完了，直接按「已完成」即可。延遲照原截止日計算，理由由主管判斷是否不計延遲率</div></div>`;
   } else if (mode === 'resume') {
     const d0 = todayStr();
     h += `<div class="px-sec"><label>📅 資料已到，預計什麼時候完成？（必填）</label>
@@ -2022,10 +2037,11 @@ function renderPickerExtra(mode) {
       <button class="px-btn" style="background:var(--accent)" onclick="event.stopPropagation();submitResume()">改回待辦</button>
       <div style="color:var(--text2);margin-top:4px">${isAdmin() ? '管理員設定的期限直接生效' : '送出後需主管核准；核准前先以你填的時間計算'}，延遲率改從這個期限起算</div></div>`;
   }
-  if (isAdmin() && ent.dl && ent.dl.state === 'pending' && ent.status !== 'wait' && !mode) {
-    h += `<div class="px-sec"><label style="color:var(--orange)">🗓 待核准的新期限</label>
-      <div class="px-row"><input type="date" id="px-ad" value="${ent.dl.date}"><input type="time" id="px-at" value="${ent.dl.time}" style="width:100px"></div>
-      <button class="px-btn" style="background:var(--orange)" onclick="event.stopPropagation();submitApprove()">核准（可先修改日期）</button></div>`;
+  if (isAdmin() && !mode) {
+    h += ent.noDelay
+      ? `<div class="px-sec"><label style="color:var(--green)">✓ 不計延遲率</label><div style="margin-bottom:6px">${esc(ent.noDelay.note || '（無說明）')}<br><span style="color:var(--text2);font-size:11px">${esc(String(ent.noDelay.at || '').replace('T', ' '))}</span></div>
+          <button class="px-btn" style="background:var(--gray)" onclick="event.stopPropagation();setExempt('${itemId}','${memberName}',false)">取消不計延遲率</button></div>`
+      : `<div class="px-sec"><button class="px-btn" style="background:var(--gray)" onclick="event.stopPropagation();setExempt('${itemId}','${memberName}',true)">不計延遲率（主管判斷）</button></div>`;
   }
   const canSeeLog = isAdmin() || canTask() || currentUser() === memberName;
   if (canSeeLog && ent.log && ent.log.length && !mode) {
@@ -4354,7 +4370,7 @@ function pfIvRender() {
   const p = (R.people || []).find(x => x.name === full);
   const dl = calcDelay(n, k);
   const lateItems = G.items.filter(it => it.deadline && it.members.includes(n) && itemInPeriod(it, k))
-    .filter(it => ['overdue', 'late'].includes(getEffStatus(it.id, n, it.deadline, it.deadtime)));
+    .filter(it => delayEval(it, n) === 'late');
   const cnt = t => G.items.filter(it => it.type === t && it.members.includes(n) && itemInPeriod(it, k)).length;
   const plans = (P.items || []).filter(x => x.name === full && x.status !== 'cancelled');
   const cur = (R.items || []).filter(it => it.owners.includes(full));
